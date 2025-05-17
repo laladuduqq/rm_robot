@@ -24,6 +24,7 @@
 #include "can.h"
 #include "crc.h"
 #include "dma.h"
+#include "dwt.h"
 #include "elog.h"
 #include "i2c.h"
 #include "rng.h"
@@ -122,6 +123,7 @@ int main(void)
   MX_CRC_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+  DWT_Init();
   SEGGER_RTT_Init();
   if (elog_user_init() == ELOG_NO_ERR) 
   { elog_start();}
