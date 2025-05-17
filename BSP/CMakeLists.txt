@@ -2,6 +2,7 @@
 add_library(bsp STATIC
     uart/bsp_uart.c
     DWT/dwt.c
+    SPI/bsp_spi.c
 )
 
 # 设置包含目录
@@ -9,6 +10,7 @@ target_include_directories(bsp
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/uart
         ${CMAKE_CURRENT_SOURCE_DIR}/DWT
+        ${CMAKE_CURRENT_SOURCE_DIR}/SPI
 )
 
 # 链接必要的库
