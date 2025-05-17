@@ -18,11 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "SEGGER_RTT.h"
 #include "cmsis_os.h"
 #include "adc.h"
 #include "can.h"
 #include "crc.h"
 #include "dma.h"
+#include "elog.h"
 #include "i2c.h"
 #include "rng.h"
 #include "rtc.h"
@@ -120,7 +122,9 @@ int main(void)
   MX_CRC_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-
+  SEGGER_RTT_Init();
+  if (elog_user_init() == ELOG_NO_ERR) 
+  { elog_start();}
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in cmsis_os2.c) */
