@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "RGB.h"
 #include "SEGGER_RTT.h"
 #include "cmsis_os.h"
 #include "adc.h"
@@ -123,6 +124,7 @@ int main(void)
   MX_CRC_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+  RGB_init();
   DWT_Init();
   SEGGER_RTT_Init();
   if (elog_user_init() == ELOG_NO_ERR) 
