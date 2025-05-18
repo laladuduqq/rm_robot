@@ -93,7 +93,7 @@ void SystemWatch_Init(void)
     watch_task_last_active = xTaskGetTickCount();
     HAL_TIM_Base_Start_IT(&htim6);
     
-    osThreadDef(WatchTask, SystemWatch_Task, osPriorityRealtime, 0, 1024);
+    osThreadDef(WatchTask, SystemWatch_Task, osPriorityRealtime, 0, 256);
     watchTaskHandle = osThreadCreate(osThread(WatchTask), NULL);
     
     if(watchTaskHandle == NULL) {

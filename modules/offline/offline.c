@@ -49,7 +49,7 @@ void offline_init(void)
     memset(&offline_manager, 0, sizeof(offline_manager));
 
 
-    osThreadDef(offlineTask, offline_task, osPriorityHigh, 0, 1024);
+    osThreadDef(offlineTask, offline_task, osPriorityHigh, 0, 256);
     offline_task_handle = osThreadCreate(osThread(offlineTask), NULL);
     
     if(offline_task_handle == NULL) {
