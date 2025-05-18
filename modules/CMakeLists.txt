@@ -7,6 +7,7 @@ add_library(modules STATIC
         algorithm/LQR.c
         RGB/RGB.c 
         systemwatch/systemwatch.c
+        offline/offline.c
 )
 
 # 设置包含目录
@@ -15,6 +16,7 @@ target_include_directories(modules
         ${CMAKE_CURRENT_SOURCE_DIR}/algorithm
         ${CMAKE_CURRENT_SOURCE_DIR}/RGB
         ${CMAKE_CURRENT_SOURCE_DIR}/systemwatch
+        ${CMAKE_CURRENT_SOURCE_DIR}/offline
 )
 
 # 链接必要的库

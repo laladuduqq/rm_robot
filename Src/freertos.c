@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
+#include "offline.h"
 #include "stm32f4xx_hal.h"
 #include "task.h"
 #include "main.h"
@@ -142,6 +143,14 @@ void StartDefaultTask(void const * argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
+  OfflineDeviceInit_t offline_init = {
+    .name = "sbus",
+    .timeout_ms = 100,
+    .level = OFFLINE_LEVEL_HIGH,
+    .beep_times = 1,
+    .enable = OFFLINE_ENABLE,
+  };
+  offline_device_register(&offline_init);
   SystemWatch_RegisterTask(defaultTaskHandle, "Default Task");
   /* Infinite loop */
   for(;;)
@@ -163,6 +172,7 @@ void initTask(void const * argument){
 
     /*----- 初始化代码开始 -----*/
     SystemWatch_Init();
+    offline_init();
     /*----- 初始化代码结束 -----*/
 
     // 恢复调度器（必须先于退出临界区）
