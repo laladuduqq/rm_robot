@@ -4,6 +4,7 @@
 #include "imu.h"
 #include "motor_task.h"
 #include "offline.h"
+#include "powercontroller.h"
 #include "referee.h"
 #include "robot_task.h"
 #include "sbus.h"
@@ -26,6 +27,7 @@ void robot_init(void)
     #endif
 
     // task init
+    powercontrol_init();
     motor_task_init();
     robot_control_task_init();
     #if defined (GIMBAL_BOARD)

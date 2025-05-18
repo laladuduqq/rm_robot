@@ -4,7 +4,9 @@
 #include "dwt.h"
 #include "motor_def.h"
 #include "offline.h"
+#include "powercontroller.h"
 #include "user_lib.h"
+#include <stdint.h>
 
 
 #define LOG_TAG              "dji"
@@ -14,7 +16,13 @@
 
 static uint8_t idx = 0; // register idx,是该文件的全局电机索引,在注册时使用
 static DJIMotor_t *dji_motor_list[DJI_MOTOR_CNT] = {NULL}; // 会在control任务中遍历该指针数组进行pid计算
-
+// 存储未开启功率控制的电机输出
+static float motor_outputs[DJI_MOTOR_CNT] = {0};
+// 获取未开启功率控制的电机输出
+static int16_t GetRawMotorOutput(uint8_t motor_num) {
+    if(motor_num >= DJI_MOTOR_CNT) return 0;
+    return (int16_t)motor_outputs[motor_num];
+}
 /**
  * @brief 由于DJI电机发送以四个一组的形式进行,故对其进行特殊处理,用6个(2can*3group)can_instance专门负责发送
  *        该变量将在 DJIMotorControl() 中使用,分组在 MotorSenderGrouping()中进行
@@ -310,141 +318,177 @@ int16_t currentToInteger(float I_min,float I_max,int16_t V_min,int16_t V_max,flo
     return V;
 }
 
-void DJIMotorControl(void)
+static float CalculatePIDOutput(DJIMotor_t *motor)
 {
-    uint8_t group, num; // 电机组号和组内编号
-    int16_t set;        // 电机控制CAN发送设定值
-    float pid_measure, pid_ref;             // 电机PID测量值和设定值
-    float state0, state1;
-    DJIMotor_t *motor;
+    float pid_measure, pid_ref;
+    
+    pid_ref = motor->motor_controller.pid_ref;
+    if (motor->motor_settings.motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
+        pid_ref *= -1;
 
-    for (size_t i = 0; i < idx; ++i){
-        motor = dji_motor_list[i];
-        if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) // 如果电机处于离线状态,发送0 若该电机处于停止状态,直接将buff置零
-        {
-            set = 0;
-        }
-        else 
-        {
-            switch (motor->motor_settings.control_algorithm) {
-                case CONTROL_PID:
-                {
-                        pid_ref = motor->motor_controller.pid_ref; // 保存设定值,防止motor_controller->pid_ref在计算过程中被修改
-                        if (motor->motor_settings.motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
-                            pid_ref *= -1;                         // 设置反转
+    // 速度环计算
+    if ((motor->motor_settings.close_loop_type & SPEED_LOOP) && 
+        (motor->motor_settings.outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)))
+    {
+        if (motor->motor_settings.feedforward_flag & SPEED_FEEDFORWARD)
+            pid_ref += *motor->motor_controller.speed_feedforward_ptr;
 
-                        // 计算位置环,只有启用位置环且外层闭环为位置时会计算速度环输出
-                        if ((motor->motor_settings.close_loop_type & ANGLE_LOOP) && motor->motor_settings.outer_loop_type == ANGLE_LOOP)
-                        {
-                            if (motor->motor_settings.angle_feedback_source == OTHER_FEED)
-                                pid_measure = *motor->motor_controller.other_angle_feedback_ptr;
-                            else
-                                pid_measure = motor->measure.total_angle; // MOTOR_FEED,对total angle闭环,防止在边界处出现突跃
-                            // 更新pid_ref进入下一个环
-                            pid_ref = PIDCalculate(&motor->motor_controller.angle_PID, pid_measure, pid_ref);
-                        }
-
-                        // 计算速度环,(外层闭环为速度或位置)且(启用速度环)时会计算速度环
-                        if ((motor->motor_settings.close_loop_type & SPEED_LOOP) && (motor->motor_settings.outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)))
-                        {
-                            if (motor->motor_settings.feedforward_flag & SPEED_FEEDFORWARD)
-                                pid_ref += *motor->motor_controller.speed_feedforward_ptr;
-
-                            if (motor->motor_settings.speed_feedback_source == OTHER_FEED)
-                                pid_measure = *motor->motor_controller.other_speed_feedback_ptr;
-                            else // MOTOR_FEED
-                                pid_measure = motor->measure.speed_rpm;
-                            // 更新pid_ref进入下一个环
-                            pid_ref = PIDCalculate(&motor->motor_controller.speed_PID, pid_measure, pid_ref);
-                        }
-
-                        // 计算电流环,目前只要启用了电流环就计算,不管外层闭环是什么,并且电流只有电机自身传感器的反馈
-                        if (motor->motor_settings.feedforward_flag & CURRENT_FEEDFORWARD)
-                            pid_ref += *motor->motor_controller.current_feedforward_ptr;
-                        if (motor->motor_settings.close_loop_type & CURRENT_LOOP)
-                        {
-                            pid_ref = PIDCalculate(&motor->motor_controller.current_PID, motor->measure.real_current, pid_ref);
-                        }
-
-                        if (motor->motor_settings.feedback_reverse_flag == FEEDBACK_DIRECTION_REVERSE)
-                            pid_ref *= -1;
-
-                        // 获取最终输出
-                        set = (int16_t)pid_ref;
-                        break;
-                }
-                case CONTROL_LQR:
-                {
-                        if(motor->motor_settings.feedback_reverse_flag == FEEDBACK_DIRECTION_REVERSE)
-                        {
-                            motor->motor_controller.lqr.feedbackreverseflag = 1;
-                        }
-
-                        // 计算位置环,只有启用位置环且外层闭环为位置时会计算速度环输出
-                        if ((motor->motor_settings.close_loop_type & ANGLE_LOOP) && motor->motor_settings.outer_loop_type == ANGLE_LOOP)
-                        {   
-                            if (motor->motor_settings.angle_feedback_source == OTHER_FEED) {state0 = *motor->motor_controller.other_angle_feedback_ptr;}
-                            else {state0 = motor->measure.total_angle;} // MOTOR_FEED,对total angle闭环,防止在边界处出现突跃
-                        }
-                        // 计算速度环,(外层闭环为速度或位置)且(启用速度环)时会计算速度环
-                        if ((motor->motor_settings.close_loop_type & SPEED_LOOP) && (motor->motor_settings.outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)))
-                        {   
-                            if (motor->motor_settings.speed_feedback_source == OTHER_FEED)  {state1 = *motor->motor_controller.other_speed_feedback_ptr;}
-                            else  {state1 = motor->measure.speed_aps;}
-                        }
-
-                        // lqr控制器计算
-                        float torque = LQRCalculate(&motor->motor_controller.lqr, state0, state1, motor->motor_controller.lqr_ref);
-                        switch (motor->motor_type) 
-                        {                                          
-                            case GM6020_CURRENT:
-                                {
-                                    set = currentToInteger(-3.0f, 3.0f, -16384, 16384, (torque / 0.741f)); // 力矩常数（Nm/A）
-                                    break;
-                                }
-                            case M3508:
-                                {
-                                    set = currentToInteger(-20.0f, 20.0f, -16384, 16384, (torque / (0.3f))); // 力矩常数（Nm/A）
-                                    break;                                
-                                }
-                            case M2006:
-                                {
-                                    set = currentToInteger(-10.0f, 10.0f, -10000, 10000, (torque / (0.18f))); // 力矩常数（Nm/A）                                
-                                    break;                                   
-                                }
-                            default :
-                                set = 0;
-                                break;
-                        }
-                }
-
-                case CONTROL_OTHER:
-                default:
-                    break;
-            }
-        }
-
-        // 分组填入发送数据
-        group                                            = motor->sender_group;
-        num                                              = motor->message_num;
-        sender_assignment[group].tx_buff[2 * num]     = (uint8_t)(set >> 8);     // 低八位
-        sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(set & 0x00ff); // 高八位
+        pid_measure = (motor->motor_settings.speed_feedback_source == OTHER_FEED) ? 
+                     *motor->motor_controller.other_speed_feedback_ptr : 
+                     motor->measure.speed_rpm;
+                     
+        pid_ref = PIDCalculate(&motor->motor_controller.speed_PID, pid_measure, pid_ref);
     }
 
-    // 遍历flag,检查是否要发送这一帧报文
-    for (size_t i = 0; i < 10; ++i)
+    // 电流环计算
+    if (motor->motor_settings.feedforward_flag & CURRENT_FEEDFORWARD)
+        pid_ref += *motor->motor_controller.current_feedforward_ptr;
+        
+    if (motor->motor_settings.close_loop_type & CURRENT_LOOP)
     {
-        if (sender_enable_flag[i])
-        {
-            CAN_SendMessage_hcan(sender_assignment[i].can_handle,
-                              &sender_assignment[i].txconf,
-                              sender_assignment[i].tx_buff,
-                              &sender_assignment[i].tx_mailbox,
-                              sender_assignment[i].txconf.DLC);
-        }
+        pid_ref = PIDCalculate(&motor->motor_controller.current_PID, 
+                              motor->measure.real_current, 
+                              pid_ref);
+    }
+
+    if (motor->motor_settings.feedback_reverse_flag == FEEDBACK_DIRECTION_REVERSE) 
+        pid_ref *= -1;
+
+    return pid_ref;
+}
+
+static float CalculateLQROutput(DJIMotor_t *motor)
+{
+    float state0 = 0, state1 = 0;
+    
+    if(motor->motor_settings.motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
+    {
+        motor->motor_controller.lqr_ref *= -1;
+    }
+
+    // 位置状态计算
+    if ((motor->motor_settings.close_loop_type & ANGLE_LOOP) && 
+        motor->motor_settings.outer_loop_type == ANGLE_LOOP)
+    {
+        state0 = (motor->motor_settings.angle_feedback_source == OTHER_FEED) ?
+                 *motor->motor_controller.other_angle_feedback_ptr :
+                 motor->measure.total_angle;
+    }
+
+    // 速度状态计算
+    if ((motor->motor_settings.close_loop_type & SPEED_LOOP) && 
+        (motor->motor_settings.outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)))
+    {
+        state1 = (motor->motor_settings.speed_feedback_source == OTHER_FEED) ?
+                 *motor->motor_controller.other_speed_feedback_ptr :
+                 motor->measure.speed_aps;
+    }
+
+    float torque = LQRCalculate(&motor->motor_controller.lqr, 
+                               state0, 
+                               state1, 
+                               motor->motor_controller.lqr_ref);
+
+    if (motor->motor_settings.feedback_reverse_flag == FEEDBACK_DIRECTION_REVERSE) torque *= -1;
+
+    switch (motor->motor_type) 
+    {                                          
+        case GM6020_CURRENT:
+            {
+                return currentToInteger(-3.0f, 3.0f, -16384, 16384, (torque / 0.741f)); // 力矩常数（Nm/A）
+                break;
+            }
+        case M3508:
+            {
+                return currentToInteger(-20.0f, 20.0f, -16384, 16384, (torque / 0.3f)); // 力矩常数（Nm/A）
+                break;                                
+            }
+        case M2006:
+            {
+                return currentToInteger(-10.0f, 10.0f, -10000, 10000, (torque / (0.18f))); // 力矩常数（Nm/A）                                
+                break;                                   
+            }
+        default:
+            return 0;
+            break;
     }
 }
 
+
+void DJIMotorControl(void)
+{
+    uint8_t group, num;
+    float control_output;
+    DJIMotor_t *motor;
+    uint8_t power_control_count = 0;
+    
+    // 第一次遍历：计算控制输出
+    for (size_t i = 0; i < idx; ++i) {
+        motor = dji_motor_list[i];
+
+        if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) {
+            control_output = 0;
+        }
+        else {
+            // 根据控制算法计算输出
+            switch (motor->motor_settings.control_algorithm) 
+            {
+                case CONTROL_PID:
+                    control_output = CalculatePIDOutput(motor);
+                    break;
+                    
+                case CONTROL_LQR:
+                    control_output = CalculateLQROutput(motor);
+                    break;
+                    
+                default:
+                    control_output = 0;
+                    break;
+            }
+        }
+        // 根据功率控制状态分别处理
+        if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+            PowerControlDji(motor, control_output);
+            power_control_count++;
+        } else {
+            // 未开启功率控制的直接存储到本地数组
+            motor_outputs[i] = control_output;
+        }
+    }
+
+    // 只有存在需要功率控制的电机时才执行功率分配
+    if(power_control_count > 0) {
+        PowerControlDjiFinalize(dji_motor_list, idx);
+    }
+    // 第二次遍历：填充发送数据
+    for (size_t i = 0; i < idx; ++i) {
+        motor = dji_motor_list[i];
+        group = motor->sender_group;
+        num = motor->message_num;
+        
+        int16_t output;
+        // 根据功率控制状态选择输出来源
+        if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+            output = GetPowerControlOutput(num);  // 从功率控制模块获取
+        } else {
+            output = GetRawMotorOutput(i);      // 从本地数组获取
+        }
+        
+        // 填充发送数据
+        sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+        sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+    }
+    // 发送CAN消息
+    for (size_t i = 0; i < 10; ++i) {
+        if (sender_enable_flag[i]) {
+            CAN_SendMessage_hcan(sender_assignment[i].can_handle,
+                               &sender_assignment[i].txconf,
+                               sender_assignment[i].tx_buff,
+                               &sender_assignment[i].tx_mailbox,
+                               sender_assignment[i].txconf.DLC);
+        }
+    }
+}
 
 
 

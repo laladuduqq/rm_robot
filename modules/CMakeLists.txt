@@ -21,6 +21,7 @@ add_library(modules STATIC
         board_com/board_com.c
         message/message_center.c
         DM_IMU/dm_imu.c
+        powercontrol/powercontrol.c
 )
 
 # 设置包含目录
@@ -40,6 +41,7 @@ target_include_directories(modules
         ${CMAKE_CURRENT_SOURCE_DIR}/board_com
         ${CMAKE_CURRENT_SOURCE_DIR}/message
         ${CMAKE_CURRENT_SOURCE_DIR}/DM_IMU
+        ${CMAKE_CURRENT_SOURCE_DIR}/powercontrol
 )
 
 # 链接必要的库

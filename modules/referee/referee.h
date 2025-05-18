@@ -55,6 +55,6 @@ extern uint8_t UI_Seq;
 
 void RefereeInit(void);
 void RefereeSend(uint8_t *send, uint16_t tx_len);
-
+const void* GetRefereeDataByCmd(CmdID_e cmd_id, uint16_t* data_length);
 
 #endif 

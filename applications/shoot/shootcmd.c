@@ -72,7 +72,7 @@ void ShootInit(void)
           .enable = OFFLINE_ENABLE,                       // 是否启用离线管理
         },
         .can_init_config = {
-            .can_handle = &hcan2,
+            .can_handle = &hcan1,
             .tx_id = 3,
         },
         .controller_param_init_config = {

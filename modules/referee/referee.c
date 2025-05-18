@@ -210,3 +210,92 @@ void Sentry_Free_Revive(void)
 
 	UI_Seq++; // 包序号+1
 }
+
+/**
+ * @brief 根据命令码获取对应的裁判系统数据
+ * @param referee 裁判系统数据结构体指针
+ * @param cmd_id 命令码
+ * @param data_length 返回数据长度的指针
+ * @return const void* 返回对应数据的指针，如果命令码无效则返回NULL
+ */
+const void* GetRefereeDataByCmd(CmdID_e cmd_id, uint16_t* data_length)
+{
+    if(data_length == NULL) {
+        return NULL;
+    }
+
+    switch(cmd_id)
+    {
+        case ID_game_state:
+            *data_length = sizeof(ext_game_state_t);
+            return &referee_info.GameState;
+
+        case ID_game_result:
+            *data_length = sizeof(ext_game_result_t);
+            return &referee_info.GameResult;
+
+        case ID_game_robot_survivors:
+            *data_length = sizeof(ext_game_robot_HP_t);
+            return &referee_info.GameRobotHP;
+
+        case ID_event_data:
+            *data_length = sizeof(ext_event_data_t);
+            return &referee_info.EventData;
+
+        case ID_supply_projectile_action:
+            *data_length = sizeof(ext_supply_projectile_action_t);
+            return &referee_info.SupplyProjectileAction;
+
+        case ID_game_robot_state:
+            *data_length = sizeof(ext_game_robot_state_t);
+            return &referee_info.GameRobotState;
+
+        case ID_power_heat_data:
+            *data_length = sizeof(ext_power_heat_data_t);
+            return &referee_info.PowerHeatData;
+
+        case ID_game_robot_pos:
+            *data_length = sizeof(ext_game_robot_pos_t);
+            return &referee_info.GameRobotPos;
+
+        case ID_buff_musk:
+            *data_length = sizeof(ext_buff_musk_t);
+            return &referee_info.BuffMusk;
+
+        case ID_aerial_robot_energy:
+            *data_length = sizeof(aerial_robot_energy_t);
+            return &referee_info.AerialRobotEnergy;
+
+        case ID_robot_hurt:
+            *data_length = sizeof(ext_robot_hurt_t);
+            return &referee_info.RobotHurt;
+
+        case ID_shoot_data:
+            *data_length = sizeof(ext_shoot_data_t);
+            return &referee_info.ShootData;
+
+        case ID_shoot_remaining:
+            *data_length = sizeof(ext_shoot_remaing_t);
+            return &referee_info.ext_shoot_remaing;
+
+        case ID_rfid_status:
+            *data_length = sizeof(rfid_status_t);
+            return &referee_info.rfid_status;
+
+        case ID_ground_robot_position:
+            *data_length = sizeof(ground_robot_position_t);
+            return &referee_info.ground_robot_position;
+
+        case ID_sentry_info:
+            *data_length = sizeof(sentry_info_t);
+            return &referee_info.sentry_info;
+
+        case ID_map_data:
+            *data_length = sizeof(map_data_t);
+            return &referee_info.map_data;
+
+        default:
+            *data_length = 0;
+            return NULL;
+    }
+}
