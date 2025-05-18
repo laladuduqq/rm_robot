@@ -19,6 +19,7 @@ add_library(modules STATIC
         MOTOR/DJI/dji.c 
         MOTOR/DAMIAO/damiao.c 
         board_com/board_com.c
+        message/message_center.c
 )
 
 # 设置包含目录
@@ -36,6 +37,7 @@ target_include_directories(modules
         ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DJI 
         ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DAMIAO 
         ${CMAKE_CURRENT_SOURCE_DIR}/board_com
+        ${CMAKE_CURRENT_SOURCE_DIR}/message
 )
 
 # 链接必要的库
