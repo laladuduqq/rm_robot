@@ -169,7 +169,6 @@ void DecodeDJIMotor(const CAN_HandleTypeDef* hcan,const uint32_t rx_id)
             && dji_motor_list[i]->can_device->rx_id == rx_id)
         {
             uint8_t *rxbuff = dji_motor_list[i]->can_device->rx_buff;    
-            dji_motor_list[i]->dt = DWT_GetDeltaT(&dji_motor_list[i]->feed_cnt);
             offline_device_update(dji_motor_list[i]->offline_index);
             // 找到对应电机，更新数据
             dji_motor_list[i]->measure.last_ecd = dji_motor_list[i]->measure.ecd;

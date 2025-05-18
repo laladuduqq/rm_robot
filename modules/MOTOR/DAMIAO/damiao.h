@@ -65,9 +65,6 @@ typedef struct
     uint8_t offline_index;
     Can_Device *can_device;
     uint32_t DMMotor_Mode_type;
-
-    float dt;
-    uint32_t feed_cnt;
 }DMMOTOR_t;
 
 typedef enum

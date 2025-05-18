@@ -48,9 +48,6 @@ typedef struct
     Motor_Working_Type_e stop_flag; // 启停标志
     uint8_t offline_index;
     Can_Device *can_device;
-
-    float dt;
-    uint32_t feed_cnt;
 } DJIMotor_t;
 
 

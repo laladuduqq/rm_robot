@@ -142,7 +142,6 @@ void DMMotorDecode(const CAN_HandleTypeDef* hcan,const  uint32_t rx_id)
         {
             uint8_t *rxbuff = dmm_motor_list[i]->can_device->rx_buff;  
             offline_device_update(dmm_motor_list[i]->offline_index);
-            dmm_motor_list[i]->dt = DWT_GetDeltaT(&dmm_motor_list[i]->feed_cnt);
 
             uint16_t tmp; // 用于暂存解析值,稍后转换成float数据,避免多次创建临时变量
 
