@@ -40,6 +40,7 @@
 #include "elog.h"
 #include "stm32f407xx.h"
 #include "systemwatch.h"
+#include "BMI088.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -130,6 +131,7 @@ int main(void)
   SEGGER_RTT_Init();
   if (elog_user_init() == ELOG_NO_ERR) 
   { elog_start();}
+  BMI088_init();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in cmsis_os2.c) */

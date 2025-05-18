@@ -143,14 +143,6 @@ void StartDefaultTask(void const * argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
-  OfflineDeviceInit_t offline_init = {
-    .name = "sbus",
-    .timeout_ms = 100,
-    .level = OFFLINE_LEVEL_HIGH,
-    .beep_times = 1,
-    .enable = OFFLINE_ENABLE,
-  };
-  offline_device_register(&offline_init);
   SystemWatch_RegisterTask(defaultTaskHandle, "Default Task");
   /* Infinite loop */
   for(;;)
