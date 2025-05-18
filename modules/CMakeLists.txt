@@ -15,6 +15,9 @@ add_library(modules STATIC
         referee/crc_rm.c 
         referee/referee_UI.c 
         referee/referee.c
+        MOTOR/motor_task.c
+        MOTOR/DJI/dji.c 
+        MOTOR/DAMIAO/damiao.c 
 )
 
 # 设置包含目录
@@ -28,6 +31,9 @@ target_include_directories(modules
         ${CMAKE_CURRENT_SOURCE_DIR}/IMU
         ${CMAKE_CURRENT_SOURCE_DIR}/REMOTE
         ${CMAKE_CURRENT_SOURCE_DIR}/referee
+        ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR 
+        ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DJI 
+        ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DAMIAO 
 )
 
 # 链接必要的库

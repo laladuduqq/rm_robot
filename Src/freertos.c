@@ -30,6 +30,7 @@
 #include "offline.h"
 #include "sbus.h"
 #include "referee.h"
+#include "motor_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -138,6 +139,7 @@ void initTask(void const * argument){
     INS_TASK_init();
     //Remote_init();
     RefereeInit();
+    motor_task_init();
     /*----- 初始化代码结束 -----*/
 
     // 恢复调度器（必须先于退出临界区）
