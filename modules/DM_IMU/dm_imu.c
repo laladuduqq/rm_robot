@@ -170,8 +170,9 @@ void DMimuTask(const void *parameter)
     {
         SystemWatch_ReportTaskAlive(osThreadGetId());
         IMU_RequestData(dm_imu.can_device->tx_id,DM_RID_GYRO);
+        osDelay(1);
         IMU_RequestData(dm_imu.can_device->tx_id,DM_RID_EULER);
-        osDelay(2);
+        osDelay(1);
     }
 }
 

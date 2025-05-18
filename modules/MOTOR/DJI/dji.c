@@ -320,7 +320,7 @@ void DJIMotorControl(void)
 
     for (size_t i = 0; i < idx; ++i){
         motor = dji_motor_list[i];
-        if (!get_device_status(motor->offline_index) || motor->stop_flag == MOTOR_STOP) // 如果电机处于离线状态,发送0 若该电机处于停止状态,直接将buff置零
+        if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) // 如果电机处于离线状态,发送0 若该电机处于停止状态,直接将buff置零
         {
             set = 0;
         }

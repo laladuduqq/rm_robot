@@ -2,6 +2,7 @@
 #include <string.h>
 #include "can.h"
 #include "FreeRTOS.h"
+#include "dwt.h"
 #include "semphr.h"
 
 #define LOG_TAG "bsp_can"
@@ -130,37 +131,34 @@ Can_Device* BSP_CAN_Device_Init(Can_Device_Init_Config_s *config) {
 
 /****************** 发送函数 ******************/
 uint8_t CAN_SendMessage(Can_Device *device, uint8_t len) {
-    if (device->can_handle == &hcan1 && can_bus[0].tx_mutex != NULL) {
-        if(xSemaphoreTake(can_bus[0].tx_mutex,0) != pdTRUE) {return 2;}// 互斥量获取失败
+    float dwt_start = DWT_GetTimeline_ms();
+    while (HAL_CAN_GetTxMailboxesFreeLevel(device->can_handle) == 0) // 等待邮箱空闲
+    {
+        if (DWT_GetTimeline_ms() - dwt_start > 100) // 超时
+        {
+            return 0;
+        }
     }
-    else {
-        if(xSemaphoreTake(can_bus[1].tx_mutex,0) != pdTRUE) {return 2;}// 互斥量获取失败
-    }
-
+    // tx_mailbox会保存实际填入了这一帧消息的邮箱,但是知道是哪个邮箱发的似乎也没啥用
     device->txconf.DLC = len;
     HAL_CAN_AddTxMessage(device->can_handle,&device->txconf,device->tx_buff,&device->tx_mailbox);
-
-    if (device->can_handle == &hcan1 && can_bus[0].tx_mutex != NULL) {xSemaphoreGive(can_bus[0].tx_mutex);}
-    else {xSemaphoreGive(can_bus[1].tx_mutex);}
 
     return HAL_OK;
 }
 
 uint8_t CAN_SendMessage_hcan(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader,
     const uint8_t aData[], uint32_t *pTxMailbox,uint8_t len) {
-    if (hcan == &hcan1 && can_bus[0].tx_mutex != NULL) {
-        if(xSemaphoreTake(can_bus[0].tx_mutex,0) != pdTRUE) {return 2;}// 互斥量获取失败
-    }
-    else {
-        if(xSemaphoreTake(can_bus[1].tx_mutex,0) != pdTRUE) {return 2;}// 互斥量获取失败
+    float dwt_start = DWT_GetTimeline_ms();
+    while (HAL_CAN_GetTxMailboxesFreeLevel(hcan) == 0) // 等待邮箱空闲
+    {
+        if (DWT_GetTimeline_ms() - dwt_start > 100) // 超时
+        {
+            return 0;
+        }
     }
 
     pHeader->DLC = len;
     HAL_CAN_AddTxMessage(hcan,pHeader,aData,pTxMailbox);
-
-    if (hcan == &hcan1 && can_bus[0].tx_mutex != NULL) {xSemaphoreGive(can_bus[0].tx_mutex);}
-    else {xSemaphoreGive(can_bus[1].tx_mutex);}
-
     return HAL_OK;
 }
 

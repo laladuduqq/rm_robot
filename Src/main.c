@@ -127,7 +127,7 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   RGB_init();
-  DWT_Init();
+  DWT_Init(168);
   SEGGER_RTT_Init();
   if (elog_user_init() == ELOG_NO_ERR) 
   { elog_start();}
