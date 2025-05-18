@@ -29,6 +29,7 @@
 #include "imu.h"
 #include "offline.h"
 #include "sbus.h"
+#include "referee.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -135,7 +136,8 @@ void initTask(void const * argument){
     SystemWatch_Init();
     offline_init();
     INS_TASK_init();
-    Remote_init();
+    //Remote_init();
+    RefereeInit();
     /*----- 初始化代码结束 -----*/
 
     // 恢复调度器（必须先于退出临界区）
