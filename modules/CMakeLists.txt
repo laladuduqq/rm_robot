@@ -18,6 +18,7 @@ add_library(modules STATIC
         MOTOR/motor_task.c
         MOTOR/DJI/dji.c 
         MOTOR/DAMIAO/damiao.c 
+        board_com/board_com.c
 )
 
 # 设置包含目录
@@ -34,10 +35,11 @@ target_include_directories(modules
         ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR 
         ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DJI 
         ${CMAKE_CURRENT_SOURCE_DIR}/MOTOR/DAMIAO 
+        ${CMAKE_CURRENT_SOURCE_DIR}/board_com
 )
 
 # 链接必要的库
-target_link_libraries(modules stm32cubemx FreeRTOS tools bsp)
+target_link_libraries(modules stm32cubemx FreeRTOS tools bsp application)
 target_link_libraries(modules -l:libarm_cortexM4lf_math.a) #链接dsp
 
 # 将 modules 添加到主项目

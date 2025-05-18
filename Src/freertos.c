@@ -26,11 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "systemwatch.h"
-#include "imu.h"
-#include "offline.h"
-#include "sbus.h"
-#include "referee.h"
-#include "motor_task.h"
+#include "robot_init.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -134,12 +130,7 @@ void initTask(void const * argument){
     vTaskSuspendAll();
 
     /*----- 初始化代码开始 -----*/
-    SystemWatch_Init();
-    offline_init();
-    INS_TASK_init();
-    //Remote_init();
-    RefereeInit();
-    motor_task_init();
+    robot_init();
     /*----- 初始化代码结束 -----*/
 
     // 恢复调度器（必须先于退出临界区）
