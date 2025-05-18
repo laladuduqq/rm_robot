@@ -28,6 +28,7 @@
  
 
 #include "elog.h"
+#include <stdint.h>
 #include <stdio.h>
 #include "SEGGER_RTT.h"
 #include "FreeRTOS.h"
@@ -37,8 +38,6 @@
 
 
 /* 互斥锁用于日志输出保护 */
-static SemaphoreHandle_t elog_lockHandle;
-static SemaphoreHandle_t elog_output_lock;
 /**
  * EasyLogger port initialize
  *
@@ -46,11 +45,6 @@ static SemaphoreHandle_t elog_output_lock;
  */
 ElogErrCode elog_port_init(void) {
     
-    /* 创建互斥锁 */
-    elog_lockHandle = xSemaphoreCreateMutex();
-    /* 创建互斥锁 */
-    elog_output_lock =xSemaphoreCreateMutex();
-
     return ELOG_NO_ERR;
 }
 
@@ -71,11 +65,8 @@ void elog_port_deinit(void) {
  * @param size log size
  */
 void elog_port_output(const char *log, size_t size) {
-    if (xSemaphoreTake(elog_output_lock, 0) == pdTRUE) 
-    { 
-        SEGGER_RTT_Write(0, log, size);
-        xSemaphoreGive(elog_output_lock);
-    }
+        
+    SEGGER_RTT_Write(0, log, size);
 }
 
 /**
@@ -84,7 +75,6 @@ void elog_port_output(const char *log, size_t size) {
 void elog_port_output_lock(void) {
     
     /* add your code here */
-    xSemaphoreTake(elog_lockHandle, portMAX_DELAY);
 }
 
 /**
@@ -93,7 +83,6 @@ void elog_port_output_lock(void) {
 void elog_port_output_unlock(void) {
     
     /* add your code here */
-    xSemaphoreGive(elog_lockHandle);
 }
 
 /**
@@ -125,8 +114,6 @@ const char *elog_port_get_p_info(void) {
  * @return current thread name
  */
 const char *elog_port_get_t_info(void) {
-    /* 添加临界区保护 */
-    taskENTER_CRITICAL(); // 进入临界区保护
     if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
         TaskHandle_t xHandle = xTaskGetCurrentTaskHandle();
         if (xHandle != NULL) {
@@ -135,7 +122,6 @@ const char *elog_port_get_t_info(void) {
             return pcName ? pcName : "Unnamed";
         }
     }
-    taskEXIT_CRITICAL();
     return "UnknownThread"; // 安全返回值
 }
 /* 在elog_user_init()之前声明 */
