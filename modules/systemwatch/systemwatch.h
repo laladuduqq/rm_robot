@@ -6,16 +6,17 @@
 
 // 最大监控任务数
 #define MAX_MONITORED_TASKS 10
-// 任务阻塞判定时间 (ms)
-#define TASK_BLOCK_TIMEOUT 1000
+// 任务阻塞判定时间 (s)
+#define TASK_BLOCK_TIMEOUT 1
 // 监控任务运行周期 (ms)
 #define MONITOR_PERIOD 100
 
 typedef struct {
     osThreadId handle;    // 任务句柄
-    uint32_t counter;       // 任务心跳计数器
     const char* name;       // 任务名称
     uint8_t isActive;       // 是否在监控
+    float dt;
+    uint32_t dt_cnt;
 } TaskMonitor_t;
 
 // 初始化系统监控

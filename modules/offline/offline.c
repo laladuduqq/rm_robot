@@ -19,17 +19,13 @@ static osTimerId beep_timer_handle  = NULL;
 
 // 内部函数声明
 static void offline_task(const void *argument);
-static inline uint32_t get_time_ms(void)
-{
-    return (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
-}
 //对于beep 部分定义
-#define BEEP_PERIOD   1500
-#define BEEP_ON_TIME  50
+#define BEEP_PERIOD   2000
+#define BEEP_ON_TIME  100
 #define BEEP_OFF_TIME 100
 
 #define BEEP_TUNE_VALUE 500
-#define BEEP_CTRL_VALUE 150
+#define BEEP_CTRL_VALUE 100
 
 #define BEEP_TUNE        TIM4->ARR
 #define BEEP_CTRL        TIM4->CCR3
@@ -39,10 +35,6 @@ static inline int32_t beep_set_times(uint8_t times);
 static void beep_ctrl_times(void);
 void beep_set_tune(uint16_t tune, uint16_t ctrl);
 
-void test_timer_callback()
-{
-    beep_ctrl_times();
-}
 void offline_init(void)
 {
     // 初始化管理器
@@ -58,22 +50,6 @@ void offline_init(void)
     }
 
     HAL_TIM_PWM_Start(&htim4,  TIM_CHANNEL_3);
-
-    // 创建定时器
-    osTimerDef(BeepTimer, test_timer_callback);
-    beep_timer_handle = osTimerCreate(osTimer(BeepTimer), osTimerPeriodic, NULL);
-    
-    // 启动定时器，10ms周期
-    if (beep_timer_handle != NULL) {
-        osStatus status = osTimerStart(beep_timer_handle, 10);
-        if (status != osOK) {
-            log_e("Failed to start beep timer, status: %d", status);
-        } else {
-            log_i("Beep timer started successfully");
-        }
-    } else {
-        log_e("Failed to create beep timer");
-    }
 }
 
 void offline_task(const void *argument)
@@ -139,6 +115,8 @@ void offline_task(const void *argument)
             beep_set_tune(0, 0);         // 立即关闭蜂鸣器
             RGB_show(LED_Black);    // 关闭LED
         }
+
+        beep_ctrl_times();
         
         osDelay(10);
     }
@@ -227,20 +205,20 @@ void beep_ctrl_times(void)
     static uint32_t times_tick;
     static uint8_t times;
 
-    if (get_time_ms() - beep_tick > BEEP_PERIOD)
+    if (DWT_GetTimeline_ms() - beep_tick > BEEP_PERIOD)
     {
         times = beep_times;
-        beep_tick = get_time_ms();
-        times_tick = get_time_ms();
+        beep_tick = DWT_GetTimeline_ms();
+        times_tick = DWT_GetTimeline_ms();
     }
     else if (times != 0)
     {
-        if (get_time_ms() - times_tick < BEEP_ON_TIME)
+        if (DWT_GetTimeline_ms() - times_tick < BEEP_ON_TIME)
         {
             beep_set_tune(BEEP_TUNE_VALUE, BEEP_CTRL_VALUE);
             RGB_show(LED_Red);
         }
-        else if (get_time_ms() - times_tick < BEEP_ON_TIME + BEEP_OFF_TIME)
+        else if (DWT_GetTimeline_ms() - times_tick < BEEP_ON_TIME + BEEP_OFF_TIME)
         {
             beep_set_tune(0, 0);
             RGB_show(LED_Black);
@@ -248,7 +226,7 @@ void beep_ctrl_times(void)
         else
         {
             times--;
-            times_tick = get_time_ms();
+            times_tick = DWT_GetTimeline_ms();
         }
     }
 }

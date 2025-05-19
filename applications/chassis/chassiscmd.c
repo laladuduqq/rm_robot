@@ -192,7 +192,7 @@ void chassis_thread_entry(const void *parameter)
             DJIMotorStop(motor_lb);
             DJIMotorStop(motor_rb);
         }
-        osDelay(2);
+        osDelay(3);
     } 
 }
 

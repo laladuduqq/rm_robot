@@ -114,6 +114,14 @@ void board_send(void *data)
     #else
         Chassis_referee_Upload_Data_s *cmd = NULL;
         cmd = (Chassis_referee_Upload_Data_s *)data;
+        board_com_list[0]->candevice->tx_buff[0] = ((int16_t)(cmd->current_hp_percent               ) >> 8) & 0xFF;      
+        board_com_list[0]->candevice->tx_buff[1] = ((int16_t)(cmd->current_hp_percent               ) & 0xFF);            
+        board_com_list[0]->candevice->tx_buff[2] = ((int16_t)(cmd->blue_base_HP               ) >> 8) & 0xFF;       
+        board_com_list[0]->candevice->tx_buff[3] = ((int16_t)(cmd->red_outpost_HP               ) & 0xFF);             
+        board_com_list[0]->candevice->tx_buff[4] = ((int16_t)(cmd->red_base_HP) >> 8) & 0xFF;   
+        board_com_list[0]->candevice->tx_buff[5] = ((int16_t)(cmd->red_base_HP) & 0xFF);    
+        board_com_list[0]->candevice->tx_buff[6] = ((int8_t )(cmd->Robot_Color));
+        board_com_list[0]->candevice->tx_buff[7] = cmd->power_management_shooter_output;
     #endif
     if (board_com_list[0]->candevice->can_handle != NULL) 
     {

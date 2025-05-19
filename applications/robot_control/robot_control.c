@@ -94,7 +94,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 board_com_init_t board_com_config = {
                     .offline_manage_init = {
                       .name = "board_com",
-                      .timeout_ms = 500,
+                      .timeout_ms = 100,
                       .level = OFFLINE_LEVEL_HIGH,
                       .beep_times = 7,
                       .enable = OFFLINE_ENABLE,

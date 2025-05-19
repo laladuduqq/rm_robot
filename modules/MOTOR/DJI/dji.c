@@ -418,66 +418,69 @@ void DJIMotorControl(void)
 {
     uint8_t group, num;
     float control_output;
-    DJIMotor_t *motor;
+    static DJIMotor_t *motor;
     uint8_t power_control_count = 0;
     
-    // 第一次遍历：计算控制输出
+    // 单次遍历完成所有操作
     for (size_t i = 0; i < idx; ++i) {
         motor = dji_motor_list[i];
+        // 增加空指针检查
+        if (motor == NULL) {
+            log_w("Motor %d is NULL, skipping", i);
+            continue;
+        }
+        group = motor->sender_group;
+        num = motor->message_num;
 
+        // 计算控制输出
         if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) {
             control_output = 0;
         }
         else {
-            // 根据控制算法计算输出
             switch (motor->motor_settings.control_algorithm) 
             {
                 case CONTROL_PID:
                     control_output = CalculatePIDOutput(motor);
                     break;
-                    
                 case CONTROL_LQR:
                     control_output = CalculateLQROutput(motor);
                     break;
-                    
                 default:
                     control_output = 0;
                     break;
             }
         }
-        // 根据功率控制状态分别处理
+
+        // 处理功率控制并直接填充发送数据
+        int16_t output;
         if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
             PowerControlDji(motor, control_output);
             power_control_count++;
         } else {
-            // 未开启功率控制的直接存储到本地数组
-            motor_outputs[i] = control_output;
+            output = (int16_t)control_output;
+            sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+            sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
         }
     }
 
-    // 只有存在需要功率控制的电机时才执行功率分配
+    // 如果有功率控制电机，进行功率分配
     if(power_control_count > 0) {
         PowerControlDjiFinalize(dji_motor_list, idx);
-    }
-    // 第二次遍历：填充发送数据
-    for (size_t i = 0; i < idx; ++i) {
-        motor = dji_motor_list[i];
-        group = motor->sender_group;
-        num = motor->message_num;
         
-        int16_t output;
-        // 根据功率控制状态选择输出来源
-        if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
-            output = GetPowerControlOutput(num);  // 从功率控制模块获取
-        } else {
-            output = GetRawMotorOutput(i);      // 从本地数组获取
+        // 更新功率控制电机的输出
+        for (size_t i = 0; i < idx; ++i) {
+            motor = dji_motor_list[i];
+            if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+                group = motor->sender_group;
+                num = motor->message_num;
+                int16_t output = GetPowerControlOutput(num);
+                sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+                sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+            }
         }
-        
-        // 填充发送数据
-        sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
-        sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
     }
-    // 发送CAN消息
+
+    // 批量发送CAN消息
     for (size_t i = 0; i < 10; ++i) {
         if (sender_enable_flag[i]) {
             CAN_SendMessage_hcan(sender_assignment[i].can_handle,

@@ -17,12 +17,12 @@ void robotcmdtask(const void *parameter)
     {
         SystemWatch_ReportTaskAlive(osThreadGetId());
         robot_control();  
-        osDelay(2);
+        osDelay(3);
     }
 }
 
 void robot_control_task_init(void){
-    osThreadDef(robotcmdTask, robotcmdtask, osPriorityAboveNormal, 0, 256);
+    osThreadDef(robotcmdTask, robotcmdtask, osPriorityNormal, 0, 256);
     robotTaskHandle = osThreadCreate(osThread(robotcmdTask), NULL);
 
     if (robotTaskHandle == NULL)
