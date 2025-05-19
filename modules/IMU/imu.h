@@ -62,6 +62,7 @@ typedef struct {
     const float (*gyro)[3];    // 指向float[3]数组的指针
 } IMU_DATA_T;
 
+extern INS_t INS;
 
 void IMU_Param_Correction(IMU_Param_t *param, float gyro[3], float accel[3]);
 void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);

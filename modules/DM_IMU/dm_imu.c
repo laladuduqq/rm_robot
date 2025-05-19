@@ -10,7 +10,7 @@
 #define LOG_LVL              LOG_LVL_DBG
 #include <elog.h>
 
-static dm_imu_t dm_imu;
+dm_imu_t dm_imu;
 static osThreadId dmimuTaskHandle;
 /**
 ************************************************************************

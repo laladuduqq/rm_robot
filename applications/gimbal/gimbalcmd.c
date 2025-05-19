@@ -25,16 +25,12 @@ static osThreadId gimbalTaskHandle;
     static Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
     static Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 
-    static IMU_DATA_T imu;
-    static DM_IMU_DATA_T dm_imu;
 
     DJIMotor_t *big_yaw = NULL;
     DJIMotor_t *small_yaw = NULL; 
     DMMOTOR_t *pitch_motor = NULL; 
     void gimbal_init(void)
     {
-        imu = INS_GetData();
-        dm_imu = DMI_IMU_GetData();
         Motor_Init_Config_s yaw_config = {
             .offline_device_motor ={
               .name = "6020_big",                        // 设备名称
@@ -48,8 +44,8 @@ static osThreadId gimbalTaskHandle;
                 .tx_id = 1,
             },
             .controller_param_init_config = {
-                .other_angle_feedback_ptr = (float *)dm_imu.YawTotalAngle,
-                .other_speed_feedback_ptr = (float *)dm_imu.gyro[2],
+                .other_angle_feedback_ptr = &dm_imu.YawTotalAngle,
+                .other_speed_feedback_ptr = &dm_imu.gyro[2],
                 .lqr_config ={
                     .K ={22.36f,4.05f},
                     .output_max = 2.223,
@@ -83,8 +79,8 @@ static osThreadId gimbalTaskHandle;
                 .tx_id = 1,
             },
             .controller_param_init_config = {
-                .other_angle_feedback_ptr = (float *)imu.YawTotalAngle,
-                .other_speed_feedback_ptr = (float *)imu.gyro[2],
+                .other_angle_feedback_ptr = &INS.YawTotalAngle,
+                .other_speed_feedback_ptr = &INS.Gyro[2],
                 .lqr_config ={
                     .K ={17.32f,1.0f},
                     .output_max = 2.223,
@@ -120,8 +116,8 @@ static osThreadId gimbalTaskHandle;
                 .rx_id = 0X206,
             },
             .controller_param_init_config = {
-                .other_angle_feedback_ptr = (float *)&imu.Pitch,
-                .other_speed_feedback_ptr = (float *)&imu.gyro[0],
+                .other_angle_feedback_ptr = &INS.Pitch,
+                .other_speed_feedback_ptr = &INS.Gyro[0],
                 .lqr_config ={
                     .K ={44.7214f,3.3411f}, //28.7312f,2.5974f
                     .output_max = 7,
@@ -155,8 +151,6 @@ void gimbal_thread_entry(const void *parameter)
     for (;;)
     {
         SystemWatch_ReportTaskAlive(osThreadGetId());
-        imu = INS_GetData();
-        dm_imu = DMI_IMU_GetData();
         SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
         if (!get_device_status(big_yaw->offline_index) 
          && !get_device_status(small_yaw->offline_index) 
@@ -179,8 +173,7 @@ void gimbal_thread_entry(const void *parameter)
                     DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
 
                     // 计算相对角度
-                    float* tmp = (float *)imu.YawTotalAngle;
-                    float small_yaw_offset = *tmp - small_yaw->measure.total_angle; 
+                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
                     DJIMotorSetRef(small_yaw, small_yaw_offset);
                     break;
                 }
@@ -189,8 +182,7 @@ void gimbal_thread_entry(const void *parameter)
                     DJIMotorEnable(big_yaw);
                     DJIMotorEnable(small_yaw);
                     DMMotorEnable(pitch_motor); 
-                    float* tmp = (float *)imu.YawTotalAngle;
-                    float small_yaw_offset = *tmp - small_yaw->measure.total_angle; 
+                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
                     DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     DMMotorSetRef(pitch_motor, gimbal_cmd_recv.pitch);
                     DJIMotorSetRef(small_yaw, gimbal_cmd_recv.small_yaw + small_yaw_offset);
@@ -205,8 +197,7 @@ void gimbal_thread_entry(const void *parameter)
                     DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
 
                     // 计算相对角度
-                    float* tmp = (float *)imu.YawTotalAngle;
-                    float small_yaw_offset = *tmp - small_yaw->measure.total_angle; 
+                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
                     DJIMotorSetRef(small_yaw, small_yaw_offset);
                     break;
                 case GIMBAL_GYRO_MODE:

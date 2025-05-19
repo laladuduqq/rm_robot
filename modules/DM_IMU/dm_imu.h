@@ -51,6 +51,8 @@ typedef struct {
     const float (*gyro)[3];    // 指向float[3]数组的指针
 } DM_IMU_DATA_T;
 
+extern dm_imu_t dm_imu;
+
 void IMU_UpdateData(const CAN_HandleTypeDef* hcan, const uint32_t rx_id);
 void IMU_RequestData(uint16_t can_id,uint8_t reg);
 void DM_IMU_Init(void);

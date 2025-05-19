@@ -26,7 +26,7 @@
 #define LOG_TAG  "ins"
 #include "elog.h"
 
-static INS_t INS;
+INS_t INS;
 static IMU_Param_t IMU_Param;
 static osThreadId INSTaskHandle;
 static BMI088_GET_Data_t BMI088_GET_Data;
