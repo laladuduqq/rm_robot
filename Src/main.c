@@ -34,13 +34,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "RGB.h"
-#include "SEGGER_RTT.h"
-#include "dwt.h"
-#include "elog.h"
 #include "stm32f407xx.h"
 #include "systemwatch.h"
-#include "BMI088.h"
+#include "robot_init.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -126,12 +122,7 @@ int main(void)
   MX_CRC_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  RGB_init();
-  DWT_Init(168);
-  SEGGER_RTT_Init();
-  if (elog_user_init() == ELOG_NO_ERR) 
-  { elog_start();}
-  BMI088_init();
+  base_init();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in cmsis_os2.c) */

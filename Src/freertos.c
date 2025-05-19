@@ -27,6 +27,8 @@
 /* USER CODE BEGIN Includes */
 #include "systemwatch.h"
 #include "robot_init.h"
+#include "RGB.h"
+#include "offline.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,7 +117,10 @@ void StartDefaultTask(void const * argument)
   for(;;)
   {
     SystemWatch_ReportTaskAlive(osThreadGetId());
-    osDelay(1);
+    if (get_system_status()==0) {
+    RGB_show(LED_Green);
+    }
+    osDelay(20);
   }
   /* USER CODE END StartDefaultTask */
 }

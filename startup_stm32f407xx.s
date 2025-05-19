@@ -240,9 +240,12 @@ g_pfnVectors:
    .weak      NMI_Handler
    .thumb_set NMI_Handler,Default_Handler
   
+   /*  
    .weak      HardFault_Handler
    .thumb_set HardFault_Handler,Default_Handler
+   */
   
+    .extern   HardFault_Handler  /*使用外部hardfault 函数*/
    .weak      MemManage_Handler
    .thumb_set MemManage_Handler,Default_Handler
   

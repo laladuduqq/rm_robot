@@ -1,5 +1,10 @@
+#include "BMI088.h"
+#include "RGB.h"
 #include "chassiscmd.h"
+#include "cm_backtrace.h"
 #include "dm_imu.h"
+#include "dwt.h"
+#include "elog.h"
 #include "gimbalcmd.h"
 #include "imu.h"
 #include "motor_task.h"
@@ -11,9 +16,22 @@
 #include "shootcmd.h"
 #include "systemwatch.h"
 #include "robotdef.h"
+
+#define HARDWARE_VERSION               "V1.0.0"
+#define SOFTWARE_VERSION               "V0.1.0"
+
+void base_init(void)
+{
+    cm_backtrace_init("CmBacktrace", HARDWARE_VERSION, SOFTWARE_VERSION);
+    RGB_init();
+    DWT_Init(168);
+    SEGGER_RTT_Init();
+    if (elog_user_init() == ELOG_NO_ERR) 
+    { elog_start();}
+    BMI088_init();
+}
 void robot_init(void)
 {
-
     SystemWatch_Init();
     offline_init();
     INS_TASK_init();

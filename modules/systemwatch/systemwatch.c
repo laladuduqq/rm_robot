@@ -88,20 +88,20 @@ void SystemWatch_Init(void)
     memset(taskList, 0, sizeof(taskList));
     taskCount = 0;
     
-    systemwatch_init = 1;
+    // //systemwatch_init = 1;
 
-    watch_task_last_active = xTaskGetTickCount();
-    HAL_TIM_Base_Start_IT(&htim6);
+    // watch_task_last_active = xTaskGetTickCount();
+    // HAL_TIM_Base_Start_IT(&htim6);
     
-    osThreadDef(WatchTask, SystemWatch_Task, osPriorityRealtime, 0, 256);
-    watchTaskHandle = osThreadCreate(osThread(WatchTask), NULL);
+    // osThreadDef(WatchTask, SystemWatch_Task, osPriorityRealtime, 0, 256);
+    // //watchTaskHandle = osThreadCreate(osThread(WatchTask), NULL);
     
-    if(watchTaskHandle == NULL) {
-        log_e("Failed to create SystemWatch task!");
-        return;
-    }
+    // if(watchTaskHandle == NULL) {
+    //     log_e("Failed to create SystemWatch task!");
+    //     return;
+    // }
     
-    log_i("SystemWatch initialized, watch task created.");
+    // log_i("SystemWatch initialized, watch task created.");
 }
 
 static void PrintTaskInfo(TaskStatus_t *pxTaskStatus, TaskMonitor_t *pxTaskMonitor)

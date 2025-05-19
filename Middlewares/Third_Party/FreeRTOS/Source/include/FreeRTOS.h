@@ -1157,6 +1157,8 @@ typedef struct xSTATIC_TCB
 	#if ( configUSE_POSIX_ERRNO == 1 )
 		int				iDummy22;
 	#endif
+
+	UBaseType_t     uxSizeOfStack;      /*< Support For CmBacktrace >*/
 } StaticTask_t;
 
 /*
