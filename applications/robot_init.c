@@ -1,5 +1,6 @@
 #include "BMI088.h"
 #include "RGB.h"
+#include "SEGGER_RTT.h"
 #include "chassiscmd.h"
 #include "cm_backtrace.h"
 #include "dm_imu.h"

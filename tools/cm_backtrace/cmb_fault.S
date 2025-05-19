@@ -38,6 +38,16 @@ HardFault_Handler:
     MOV     r0, lr                  /* get lr */
     MOV     r1, sp                  /* get stack pointer (current is MSP) */
     BL      cm_backtrace_fault
+    /* 设置延时，确保日志输出完成 */
+    LDR     r0, =2000000           /* 延时循环计数 */
+delay_loop:
+    SUBS    r0, r0, #1
+    BNE     delay_loop
+
+    /* 触发系统复位 */
+    LDR     r0, =0xE000ED0C        /* AIRCR 寄存器地址 */
+    LDR     r1, =0x05FA0004        /* 系统复位键值 */
+    STR     r1, [r0]  
 
 Fault_Loop:
     BL      Fault_Loop              /* while(1) */

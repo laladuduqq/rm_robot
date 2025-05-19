@@ -20,6 +20,7 @@ static volatile uint32_t watch_task_last_active = 0;
 static void PrintTaskInfo(TaskStatus_t *pxTaskStatus, TaskMonitor_t *pxTaskMonitor);
 static void PrintSystemStatus(void);
 static const char* GetTaskStateString(eTaskState state);
+extern void HardFault_Handler();
 
 static void SystemWatch_Task(const void *argument)
 {
@@ -52,10 +53,9 @@ static void SystemWatch_Task(const void *argument)
                     
                     // 打印系统整体状态
                     PrintSystemStatus();
-                    
                     taskEXIT_CRITICAL();
                     osDelay(1000);
-                    HAL_NVIC_SystemReset();
+                    HAL_NVIC_SystemReset();   
                 }
                 lastCounter[i] = taskList[i].counter;
             }
@@ -71,7 +71,7 @@ void sysytemwatch_it_callback(void){
         if(xTaskGetTickCount() - watch_task_last_active > MONITOR_PERIOD * 5) {
             log_e("\r\n**** SystemWatch Task Blocked! ****");
             log_e("Last active: %lu ms ago", xTaskGetTickCount() - watch_task_last_active);
-            HAL_NVIC_SystemReset();
+            //HAL_NVIC_SystemReset();
         }
     }
 }
@@ -88,20 +88,20 @@ void SystemWatch_Init(void)
     memset(taskList, 0, sizeof(taskList));
     taskCount = 0;
     
-    // //systemwatch_init = 1;
+    // systemwatch_init = 1;
 
     // watch_task_last_active = xTaskGetTickCount();
-    // HAL_TIM_Base_Start_IT(&htim6);
+    // //HAL_TIM_Base_Start_IT(&htim6);
     
     // osThreadDef(WatchTask, SystemWatch_Task, osPriorityRealtime, 0, 256);
-    // //watchTaskHandle = osThreadCreate(osThread(WatchTask), NULL);
+    // watchTaskHandle = osThreadCreate(osThread(WatchTask), NULL);
     
     // if(watchTaskHandle == NULL) {
     //     log_e("Failed to create SystemWatch task!");
     //     return;
     // }
     
-    // log_i("SystemWatch initialized, watch task created.");
+    log_i("SystemWatch initialized, watch task created.");
 }
 
 static void PrintTaskInfo(TaskStatus_t *pxTaskStatus, TaskMonitor_t *pxTaskMonitor)

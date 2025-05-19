@@ -29,13 +29,20 @@
 #ifndef _CMB_CFG_H_
 #define _CMB_CFG_H_
 
-#include "SEGGER_RTT.h"
+#include "elog.h"
+
+// 基于168MHz主频的软件延时函数
+static inline __attribute__((always_inline)) void fault_delay_us(volatile uint32_t us) {
+    // 168MHz下，大约每168个循环为1us
+    volatile uint32_t cycles = us * 168;
+    while(cycles--);
+}
 
 #ifdef	CMB_USER_CFG
 #include "cmb_user_cfg.h"
 #else
 /* print line, must config by user */
-#define cmb_println(...)               SEGGER_RTT_printf(0, __VA_ARGS__);SEGGER_RTT_WriteString(0, "\r\n") /* e.g., printf(__VA_ARGS__);printf("\r\n")  or  SEGGER_RTT_printf(0, __VA_ARGS__);SEGGER_RTT_WriteString(0, "\r\n")  */
+#define cmb_println(...)               elog_e(LOG_TAG, __VA_ARGS__);fault_delay_us(50000); /* 延时0.5s确保日志输出完成 */ /* e.g., printf(__VA_ARGS__);printf("\r\n")  or  SEGGER_RTT_printf(0, __VA_ARGS__);SEGGER_RTT_WriteString(0, "\r\n")  */
 /* enable OS platform */
 #define CMB_USING_OS_PLATFORM
 /* OS platform type, must config when CMB_USING_OS_PLATFORM is enable */

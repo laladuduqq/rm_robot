@@ -237,7 +237,7 @@ void beep_ctrl_times(void)
     {
         if (get_time_ms() - times_tick < BEEP_ON_TIME)
         {
-            //beep_set_tune(BEEP_TUNE_VALUE, BEEP_CTRL_VALUE);
+            beep_set_tune(BEEP_TUNE_VALUE, BEEP_CTRL_VALUE);
             RGB_show(LED_Red);
         }
         else if (get_time_ms() - times_tick < BEEP_ON_TIME + BEEP_OFF_TIME)

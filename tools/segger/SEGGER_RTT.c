@@ -328,7 +328,7 @@ static void _DoInit(void) {
   p->aUp[0].SizeOfBuffer  = BUFFER_SIZE_UP;
   p->aUp[0].RdOff         = 0u;
   p->aUp[0].WrOff         = 0u;
-  p->aUp[0].Flags         = SEGGER_RTT_MODE_DEFAULT;
+  p->aUp[0].Flags         = SEGGER_RTT_MODE_NO_BLOCK_SKIP;
   //
   // Initialize down buffer 0
   //
@@ -337,7 +337,7 @@ static void _DoInit(void) {
   p->aDown[0].SizeOfBuffer  = BUFFER_SIZE_DOWN;
   p->aDown[0].RdOff         = 0u;
   p->aDown[0].WrOff         = 0u;
-  p->aDown[0].Flags         = SEGGER_RTT_MODE_DEFAULT;
+  p->aDown[0].Flags         = SEGGER_RTT_MODE_NO_BLOCK_SKIP;
   //
   // Finish initialization of the control block.
   // Copy Id string backwards to make sure that "SEGGER RTT" is not found in initializer memory (usually flash),
