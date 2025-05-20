@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "dwt.h"
 #include "semphr.h"
+#include "stm32f4xx_hal_def.h"
 
 #define LOG_TAG "bsp_can"
 #include "elog.h"
@@ -131,35 +132,48 @@ Can_Device* BSP_CAN_Device_Init(Can_Device_Init_Config_s *config) {
 
 /****************** 发送函数 ******************/
 uint8_t CAN_SendMessage(Can_Device *device, uint8_t len) {
-    float dwt_start = DWT_GetTimeline_ms();
-    while (HAL_CAN_GetTxMailboxesFreeLevel(device->can_handle) == 0) // 等待邮箱空闲
-    {
-        if (DWT_GetTimeline_ms() - dwt_start > 100) // 超时
-        {
-            return 0;
-        }
-    }
-    // tx_mailbox会保存实际填入了这一帧消息的邮箱,但是知道是哪个邮箱发的似乎也没啥用
-    device->txconf.DLC = len;
-    HAL_CAN_AddTxMessage(device->can_handle,&device->txconf,device->tx_buff,&device->tx_mailbox);
+    uint32_t start_time;
+    uint32_t timeout_cycles = CAN_SEND_TIMEOUT_US * 168; // 168MHz下的周期数
+    uint8_t retry_cnt = CAN_SEND_RETRY_CNT;
 
-    return HAL_OK;
+    while (retry_cnt--) {
+        start_time = DWT->CYCCNT;
+        // 快速检查邮箱
+        if (HAL_CAN_GetTxMailboxesFreeLevel(device->can_handle) > 0) {
+            device->txconf.DLC = len;
+            HAL_CAN_AddTxMessage(device->can_handle, 
+                                      &device->txconf,
+                                      device->tx_buff,
+                                      &device->tx_mailbox);
+            return HAL_OK;
+        }
+        
+        // 短时等待
+        while ((DWT->CYCCNT - start_time) < timeout_cycles);
+    }
+    return HAL_TIMEOUT;
 }
 
 uint8_t CAN_SendMessage_hcan(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader,
-    const uint8_t aData[], uint32_t *pTxMailbox,uint8_t len) {
-    float dwt_start = DWT_GetTimeline_ms();
-    while (HAL_CAN_GetTxMailboxesFreeLevel(hcan) == 0) // 等待邮箱空闲
-    {
-        if (DWT_GetTimeline_ms() - dwt_start > 100) // 超时
-        {
-            return 0;
-        }
-    }
+    const uint8_t aData[], uint32_t *pTxMailbox, uint8_t len) {
+    uint32_t start_time;
+    uint32_t timeout_cycles = CAN_SEND_TIMEOUT_US * 168; // 168MHz下的周期数
+    uint8_t retry_cnt = CAN_SEND_RETRY_CNT;
 
-    pHeader->DLC = len;
-    HAL_CAN_AddTxMessage(hcan,pHeader,aData,pTxMailbox);
-    return HAL_OK;
+    while (retry_cnt--) {
+        start_time = DWT->CYCCNT;
+        // 快速检查邮箱
+        if (HAL_CAN_GetTxMailboxesFreeLevel(hcan) > 0) {
+            pHeader->DLC = len;
+            HAL_CAN_AddTxMessage(hcan, pHeader, aData, pTxMailbox);
+            return HAL_OK;
+        }
+        
+        // 短时等待
+        while ((DWT->CYCCNT - start_time) < timeout_cycles);
+    }
+    
+    return HAL_TIMEOUT;
 }
 
 void BSP_CAN_Device_DeInit(Can_Device *dev) {

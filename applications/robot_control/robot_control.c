@@ -48,7 +48,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 board_com_init_t board_com_config = {
                     .offline_manage_init = {
                       .name = "board_com",
-                      .timeout_ms = 500,
+                      .timeout_ms = 100,
                       .level = OFFLINE_LEVEL_HIGH,
                       .beep_times = 8,
                       .enable = OFFLINE_ENABLE,
@@ -79,7 +79,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
                 PubPushMessage(shoot_cmd_pub,(void *)&shoot_cmd_send);
 
-                board_send(&chassis_cmd_send);    
+                //board_send(&chassis_cmd_send);    
             } 
     #else
             static Chassis_referee_Upload_Data_s Chassis_referee_Upload_Data;

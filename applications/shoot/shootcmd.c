@@ -163,7 +163,7 @@ void shootask(const void *parameter)
             DJIMotorStop(friction_r);
             DJIMotorStop(loader);
         }
-        osDelay(2);
+        osDelay(3);
     }
 }
 void shoot_task_init(void){

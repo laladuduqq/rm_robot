@@ -224,7 +224,7 @@ void gimbal_thread_entry(const void *parameter)
             // 推送消息
             PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
         }
-        osDelay(2);
+        osDelay(3);
     }
 }
 

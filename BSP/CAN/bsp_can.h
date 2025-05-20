@@ -8,6 +8,9 @@
 
 #define MAX_DEVICES_PER_BUS  8  // 每总线最大设备数
 
+#define CAN_SEND_RETRY_CNT  3        // 重试次数
+#define CAN_SEND_TIMEOUT_US 100 
+
 /* 接收模式枚举 */
 typedef enum {
     CAN_MODE_BLOCKING,
