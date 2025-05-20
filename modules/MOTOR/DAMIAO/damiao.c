@@ -268,9 +268,14 @@ void DMMotorStop(DMMOTOR_t *motor)
     motor->stop_flag = MOTOR_STOP;
 }
 
-void DMMotorOuterLoop(DMMOTOR_t *motor, Closeloop_Type_e type)
+void DMMotorOuterLoop(DMMOTOR_t *motor, Closeloop_Type_e type,LQR_Init_Config_s *lqr_config)
 {
     motor->motor_settings.outer_loop_type = type;
+
+    // 如果是LQR控制且提供了配置参数，则重新初始化，其他算法传递NULL即可
+    if (motor->motor_settings.control_algorithm == CONTROL_LQR && lqr_config != NULL) {
+        LQRInit(&motor->motor_controller.lqr, lqr_config);
+    }
 }
 
 void DMMotorcontrol(void){

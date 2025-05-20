@@ -280,9 +280,15 @@ void DJIMotorEnable(DJIMotor_t *motor)
 }
 
 /* 修改电机的实际闭环对象 */
-void DJIMotorOuterLoop(DJIMotor_t *motor, Closeloop_Type_e outer_loop)
+void DJIMotorOuterLoop(DJIMotor_t *motor, Closeloop_Type_e outer_loop, LQR_Init_Config_s *lqr_config)
 {
+    // 更新外环类型
     motor->motor_settings.outer_loop_type = outer_loop;
+    
+    // 如果是LQR控制且提供了配置参数，则重新初始化，其他算法传递NULL即可
+    if (motor->motor_settings.control_algorithm == CONTROL_LQR && lqr_config != NULL) {
+        LQRInit(&motor->motor_controller.lqr, lqr_config);
+    }
 }
 
 // 设置参考值

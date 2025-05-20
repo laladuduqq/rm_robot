@@ -79,7 +79,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
                 PubPushMessage(shoot_cmd_pub,(void *)&shoot_cmd_send);
 
-                //board_send(&chassis_cmd_send);    
+                board_send(&chassis_cmd_send);    
             } 
     #else
             static Chassis_referee_Upload_Data_s Chassis_referee_Upload_Data;

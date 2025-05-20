@@ -79,7 +79,7 @@ typedef enum
 DMMOTOR_t *DMMotorInit(Motor_Init_Config_s *config,uint32_t DM_Mode_type);
 
 void DMMotorSetRef(DMMOTOR_t *motor, float ref);
-void DMMotorOuterLoop(DMMOTOR_t *motor,Closeloop_Type_e closeloop_type);
+void DMMotorOuterLoop(DMMOTOR_t *motor,Closeloop_Type_e closeloop_type,LQR_Init_Config_s *lqr_config);
 void DMMotorEnable(DMMOTOR_t *motor);
 void DMMotorStop(DMMOTOR_t *motor);
 void DMMotorCaliEncoder(DMMOTOR_t *motor);

@@ -57,7 +57,7 @@ void DJIMotorChangeFeed(DJIMotor_t *motor, Closeloop_Type_e loop, Feedback_Sourc
 void DJIMotorControl(void);
 void DJIMotorStop(DJIMotor_t *motor);
 void DJIMotorEnable(DJIMotor_t *motor);
-void DJIMotorOuterLoop(DJIMotor_t *motor, Closeloop_Type_e outer_loop);
+void DJIMotorOuterLoop(DJIMotor_t *motor, Closeloop_Type_e outer_loop, LQR_Init_Config_s *lqr_config);
 void DecodeDJIMotor(const CAN_HandleTypeDef* hcan,const  uint32_t rx_id);
 
 

@@ -143,7 +143,6 @@ void shootask(const void *parameter)
                         DJIMotorSetRef(loader, -6000 * 6.0f);
                         break;
                     case LOAD_REVERSE:
-                        DJIMotorOuterLoop(loader, SPEED_LOOP);
                         break;
                     case LOAD_3_BULLET:
                     default:
