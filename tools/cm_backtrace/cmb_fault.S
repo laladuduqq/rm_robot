@@ -39,7 +39,7 @@ HardFault_Handler:
     MOV     r1, sp                  /* get stack pointer (current is MSP) */
     BL      cm_backtrace_fault
     /* 设置延时，确保日志输出完成 */
-    LDR     r0, =2000000           /* 延时循环计数 */
+    LDR     r0, =1000000           /* 延时循环计数 */
 delay_loop:
     SUBS    r0, r0, #1
     BNE     delay_loop

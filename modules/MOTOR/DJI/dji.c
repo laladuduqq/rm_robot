@@ -161,35 +161,61 @@ static void MotorSenderGrouping(DJIMotor_t *motor, Can_Device_Init_Config_s *con
 /**
  * @brief 根据返回的can_instance对反馈报文进行解析
  */
-void DecodeDJIMotor(const CAN_HandleTypeDef* hcan,const uint32_t rx_id)
-{
-    for (uint8_t i = 0; i < idx; i++) {
-        if (dji_motor_list[i] 
-            &&dji_motor_list[i]->can_device->can_handle == hcan 
-            && dji_motor_list[i]->can_device->rx_id == rx_id)
-        {
-            uint8_t *rxbuff = dji_motor_list[i]->can_device->rx_buff;    
-            offline_device_update(dji_motor_list[i]->offline_index);
-            // 找到对应电机，更新数据
-            dji_motor_list[i]->measure.last_ecd = dji_motor_list[i]->measure.ecd;
-            dji_motor_list[i]->measure.ecd = ((uint16_t)rxbuff[0]) << 8 | rxbuff[1];
-            dji_motor_list[i]->measure.angle_single_round = ECD_ANGLE_COEF_DJI * (float)dji_motor_list[i]->measure.ecd;
-            dji_motor_list[i]->measure.speed_rpm = (1.0f - SPEED_SMOOTH_COEF) * dji_motor_list[i]->measure.speed_rpm + 
-                                                    SPEED_SMOOTH_COEF*(float)((int16_t)(rxbuff[2] << 8 | rxbuff[3]));
-            dji_motor_list[i]->measure.speed_aps = (1.0f - SPEED_SMOOTH_COEF) * dji_motor_list[i]->measure.speed_aps +
-                                                    RPM_2_ANGLE_PER_SEC * SPEED_SMOOTH_COEF * (float)((int16_t)(rxbuff[2] << 8 | rxbuff[3]));
-            dji_motor_list[i]->measure.real_current = (1.0f - CURRENT_SMOOTH_COEF) * dji_motor_list[i]->measure.real_current +
-                                                       CURRENT_SMOOTH_COEF * (float)((int16_t)(rxbuff[4] << 8 | rxbuff[5]));
-            dji_motor_list[i]->measure.temperature = rxbuff[6];
-            // 多圈角度计算,前提是假设两次采样间电机转过的角度小于180°,自己画个图就清楚计算过程了
-            if (dji_motor_list[i]->measure.ecd - dji_motor_list[i]->measure.last_ecd > 4096)
-                dji_motor_list[i]->measure.total_round--;
-            else if (dji_motor_list[i]->measure.ecd - dji_motor_list[i]->measure.last_ecd < -4096)
-                dji_motor_list[i]->measure.total_round++;
-            dji_motor_list[i]->measure.total_angle = dji_motor_list[i]->measure.total_round * 360 + dji_motor_list[i]->measure.angle_single_round;                
-        }
-    }
-}
+ void DecodeDJIMotor(const CAN_HandleTypeDef* hcan, const uint32_t rx_id)
+ {
+     if (hcan == NULL) {return;}
+ 
+     for (uint8_t i = 0; i < idx; i++) {
+         if (i >= DJI_MOTOR_CNT || dji_motor_list[i] == NULL) {continue;}
+         if (dji_motor_list[i]->can_device == NULL) {continue;}
+ 
+         if (dji_motor_list[i]->can_device->can_handle == hcan && dji_motor_list[i]->can_device->rx_id == rx_id)
+         {
+             // 更新在线状态
+             offline_device_update(dji_motor_list[i]->offline_index);
+ 
+             // 使用临时变量存储计算结果，避免直接访问可能无效的内存
+             uint16_t ecd = ((uint16_t)dji_motor_list[i]->can_device->rx_buff[0] << 8) | dji_motor_list[i]->can_device->rx_buff[1];
+             int16_t speed = (int16_t)(dji_motor_list[i]->can_device->rx_buff[2] << 8 | dji_motor_list[i]->can_device->rx_buff[3]);
+             int16_t current = (int16_t)(dji_motor_list[i]->can_device->rx_buff[4] << 8 | dji_motor_list[i]->can_device->rx_buff[5]);
+             uint8_t temp = dji_motor_list[i]->can_device->rx_buff[6];
+ 
+             // 更新电机数据
+             dji_motor_list[i]->measure.last_ecd = dji_motor_list[i]->measure.ecd;
+             dji_motor_list[i]->measure.ecd = ecd;
+             dji_motor_list[i]->measure.angle_single_round = ECD_ANGLE_COEF_DJI * (float)ecd;
+             
+             // 使用平滑系数更新速度和电流
+             dji_motor_list[i]->measure.speed_rpm = (1.0f - SPEED_SMOOTH_COEF) * 
+                 dji_motor_list[i]->measure.speed_rpm + SPEED_SMOOTH_COEF * (float)speed;
+             
+             dji_motor_list[i]->measure.speed_aps = (1.0f - SPEED_SMOOTH_COEF) * 
+                 dji_motor_list[i]->measure.speed_aps + RPM_2_ANGLE_PER_SEC * 
+                 SPEED_SMOOTH_COEF * (float)speed;
+             
+             dji_motor_list[i]->measure.real_current = (1.0f - CURRENT_SMOOTH_COEF) * 
+                 dji_motor_list[i]->measure.real_current + CURRENT_SMOOTH_COEF * 
+                 (float)current;
+             
+             dji_motor_list[i]->measure.temperature = temp;
+ 
+             // 多圈角度计算
+             int16_t delta_ecd = dji_motor_list[i]->measure.ecd - 
+                                dji_motor_list[i]->measure.last_ecd;
+             
+             if (delta_ecd > 4096) {
+                 dji_motor_list[i]->measure.total_round--;
+             } else if (delta_ecd < -4096) {
+                 dji_motor_list[i]->measure.total_round++;
+             }
+             
+             dji_motor_list[i]->measure.total_angle = 
+                 dji_motor_list[i]->measure.total_round * 360.0f + 
+                 dji_motor_list[i]->measure.angle_single_round;
+             break; // 找到匹配的电机后退出循环
+         }
+     }
+ }
 
 // 电机初始化,返回一个电机实例
 DJIMotor_t *DJIMotorInit(Motor_Init_Config_s *config)
@@ -424,69 +450,66 @@ void DJIMotorControl(void)
 {
     uint8_t group, num;
     float control_output;
-    static DJIMotor_t *motor;
+    DJIMotor_t *motor;
     uint8_t power_control_count = 0;
     
-    // 单次遍历完成所有操作
+    // 第一次遍历：计算控制输出
     for (size_t i = 0; i < idx; ++i) {
         motor = dji_motor_list[i];
-        // 增加空指针检查
-        if (motor == NULL) {
-            log_w("Motor %d is NULL, skipping", i);
-            continue;
-        }
-        group = motor->sender_group;
-        num = motor->message_num;
 
-        // 计算控制输出
         if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) {
             control_output = 0;
         }
         else {
+            // 根据控制算法计算输出
             switch (motor->motor_settings.control_algorithm) 
             {
                 case CONTROL_PID:
                     control_output = CalculatePIDOutput(motor);
                     break;
+                    
                 case CONTROL_LQR:
                     control_output = CalculateLQROutput(motor);
                     break;
+                    
                 default:
                     control_output = 0;
                     break;
             }
         }
-
-        // 处理功率控制并直接填充发送数据
-        int16_t output;
+        // 根据功率控制状态分别处理
         if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
             PowerControlDji(motor, control_output);
             power_control_count++;
         } else {
-            output = (int16_t)control_output;
-            sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
-            sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+            // 未开启功率控制的直接存储到本地数组
+            motor_outputs[i] = control_output;
         }
     }
 
-    // 如果有功率控制电机，进行功率分配
+    // 只有存在需要功率控制的电机时才执行功率分配
     if(power_control_count > 0) {
         PowerControlDjiFinalize(dji_motor_list, idx);
-        
-        // 更新功率控制电机的输出
-        for (size_t i = 0; i < idx; ++i) {
-            motor = dji_motor_list[i];
-            if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
-                group = motor->sender_group;
-                num = motor->message_num;
-                int16_t output = GetPowerControlOutput(num);
-                sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
-                sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
-            }
-        }
     }
-
-    // 批量发送CAN消息
+    // 第二次遍历：填充发送数据
+    for (size_t i = 0; i < idx; ++i) {
+        motor = dji_motor_list[i];
+        group = motor->sender_group;
+        num = motor->message_num;
+        
+        int16_t output;
+        // 根据功率控制状态选择输出来源
+        if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+            output = GetPowerControlOutput(num);  // 从功率控制模块获取
+        } else {
+            output = GetRawMotorOutput(i);      // 从本地数组获取
+        }
+        
+        // 填充发送数据
+        sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+        sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+    }
+    // 发送CAN消息
     for (size_t i = 0; i < 10; ++i) {
         if (sender_enable_flag[i]) {
             CAN_SendMessage_hcan(sender_assignment[i].can_handle,
@@ -497,6 +520,97 @@ void DJIMotorControl(void)
         }
     }
 }
+
+// void DJIMotorControl(void)
+// {
+//     uint8_t group, num;
+//     float control_output;
+//     static DJIMotor_t *motor;
+//     uint8_t power_control_count = 0;
+    
+//     // 单次遍历完成所有操作
+//     for (size_t i = 0; i < idx; ++i) {
+//         motor = dji_motor_list[i];
+//         // 增加更严格的空指针和索引检查
+//         if (motor == NULL || i >= DJI_MOTOR_CNT) {
+//             continue;
+//         }
+
+//         // 检查 can_device 是否有效
+//         if (motor->can_device == NULL) {
+//             continue;
+//         }
+
+//         // 验证 sender_group 和 message_num 的有效性
+//         if (motor->sender_group >= 10 || motor->message_num >= 4) {
+//             continue;
+//         }
+
+//         group = motor->sender_group;
+//         num = motor->message_num;
+
+//         // 计算控制输出
+//         if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) {
+//             control_output = 0;
+//         }
+//         else {
+//             // 增加控制算法类型检查
+//             switch (motor->motor_settings.control_algorithm) 
+//             {
+//                 case CONTROL_PID:
+//                     control_output = CalculatePIDOutput(motor);
+//                     break;
+//                 case CONTROL_LQR:
+//                     control_output = CalculateLQROutput(motor);
+//                     break;
+//                 default:
+//                     control_output = 0;
+//                     break;
+//             }
+//         }
+
+//         // 处理功率控制并直接填充发送数据
+//         if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+//             PowerControlDji(motor, control_output);
+//             power_control_count++;
+//         } else {
+//             int16_t output = (int16_t)control_output;
+//             // 检查发送缓冲区访问是否越界
+//             if ((2 * num + 1) < 8) {  // CAN报文最大8字节
+//                 sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+//                 sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+//             }
+//         }
+//     }
+
+//     // 如果有功率控制电机，进行功率分配
+//     if(power_control_count > 0) {
+//         PowerControlDjiFinalize(dji_motor_list, idx);
+        
+//         // 更新功率控制电机的输出
+//         for (size_t i = 0; i < idx; ++i) {
+//             motor = dji_motor_list[i];
+//             if(motor->motor_settings.PowerControlState == PowerControlState_ON) {
+//                 group = motor->sender_group;
+//                 num = motor->message_num;
+//                 int16_t output = GetPowerControlOutput(num);
+//                 sender_assignment[group].tx_buff[2 * num] = (uint8_t)(output >> 8);
+//                 sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(output & 0x00ff);
+//             }
+//         }
+//     }
+
+//     // 批量发送CAN消息
+//     for (size_t i = 0; i < 10; ++i) {
+//         if (sender_enable_flag[i]) {
+//             CAN_SendMessage_hcan(sender_assignment[i].can_handle,
+//                                &sender_assignment[i].txconf,
+//                                sender_assignment[i].tx_buff,
+//                                &sender_assignment[i].tx_mailbox,
+//                                sender_assignment[i].txconf.DLC);
+//         }
+//     }
+// }
 
 
 

@@ -17,7 +17,6 @@
 #include <elog.h>
 
 static osThreadId gimbalTaskHandle;
-static float auto_angle_record=0.0f;
 #if defined (SENTRY_MODE)
     static Publisher_t *gimbal_pub;                   // 云台应用消息发布者(云台反馈给cmd)
     static Subscriber_t *gimbal_sub;                  // cmd控制消息订阅者
@@ -171,18 +170,7 @@ void gimbal_thread_entry(const void *parameter)
             {
                 case GIMBAL_KEEPING_SMALL_YAW:
                 {
-                    LQR_Init_Config_s lqr_config ={
-                        .K ={22.36f,4.05f},
-                        .output_max = 2.223,
-                        .output_min =-2.223,
-                        .state_dim = 2,
-                        .compensation_type =COMPENSATION_NONE,
-                    };
-                    DJIMotorOuterLoop(big_yaw, ANGLE_LOOP, &lqr_config);
-                    DJIMotorChangeFeed(big_yaw,SPEED_LOOP,OTHER_FEED);
-
-
-                    DJIMotorSetRef(big_yaw,auto_angle_record + gimbal_cmd_recv.yaw);
+                    DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
 
                     // 计算相对角度
@@ -192,38 +180,14 @@ void gimbal_thread_entry(const void *parameter)
                 }
                 case GIMBAL_KEEPING_BIG_YAW:
                 {
-                    LQR_Init_Config_s lqr_config ={
-                        .K ={22.36f,4.05f},
-                        .output_max = 2.223,
-                        .output_min =-2.223,
-                        .state_dim = 2,
-                        .compensation_type =COMPENSATION_NONE,
-                    };
-                    DJIMotorOuterLoop(big_yaw, ANGLE_LOOP, &lqr_config);
-                    DJIMotorChangeFeed(big_yaw,SPEED_LOOP,OTHER_FEED);
-
                     float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
-                    DJIMotorSetRef(big_yaw,auto_angle_record + gimbal_cmd_recv.yaw);
+                    DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     DMMotorSetRef(pitch_motor, gimbal_cmd_recv.pitch);
                     DJIMotorSetRef(small_yaw, gimbal_cmd_recv.small_yaw + small_yaw_offset);
                     break;
                 }
                 case GIMBAL_AUTO_MODE:
                 {
-                    LQR_Init_Config_s lqr_config ={
-                        .K ={0.3f},
-                        .output_max = 2.223,
-                        .output_min =-2.223,
-                        .state_dim = 1,
-                        .compensation_type =COMPENSATION_NONE,
-                    };
-                    DJIMotorOuterLoop(big_yaw, SPEED_LOOP, &lqr_config);
-                    DJIMotorChangeFeed(big_yaw,SPEED_LOOP,MOTOR_FEED);
-
-                    DJIMotorSetRef(big_yaw,15 * 6.0f);
-                    auto_angle_record = dm_imu.YawTotalAngle;
-
-
                     DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
                     // 计算相对角度
                     float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 

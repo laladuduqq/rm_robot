@@ -125,7 +125,7 @@ void chassis_thread_entry(const void *parameter)
             switch (chassis_cmd_recv.chassis_mode)
             {
             case CHASSIS_ROTATE_REVERSE: // 自旋反转,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
-                chassis_cmd_recv.wz =-1;
+                chassis_cmd_recv.wz =-2;
                 break;
             case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
                 PIDCalculate(&chassis_follow_pid,chassis_cmd_recv.offset_angle,0);

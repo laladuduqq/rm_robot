@@ -2,6 +2,7 @@
 #include <string.h>
 #include "can.h"
 #include "FreeRTOS.h"
+#include "cmsis_gcc.h"
 #include "dwt.h"
 #include "semphr.h"
 #include "stm32f4xx_hal_def.h"
@@ -218,11 +219,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                    rx_header.StdId == bus->devices[i].rx_id && 
                    bus->devices[i].can_handle == hcan) 
                 {
+                    __disable_irq();
                     memcpy(bus->devices[i].rx_buff, data, rx_header.DLC);
                     bus->devices[i].rx_len = rx_header.DLC;
                     if(bus->devices[i].can_callback) {
                         bus->devices[i].can_callback(bus->devices[i].can_handle, rx_header.StdId);
                     }
+                    __enable_irq();
                 }
             }
         }
@@ -250,12 +253,14 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                    rx_header.StdId == bus->devices[i].rx_id && 
                    bus->devices[i].can_handle == hcan) 
                 {
+                    __disable_irq();
                     memcpy(bus->devices[i].rx_buff, data, rx_header.DLC);
                     bus->devices[i].rx_len = rx_header.DLC;
                     if(bus->devices[i].can_callback) {
                         bus->devices[i].can_callback(bus->devices[i].can_handle, rx_header.StdId);
                     }
-                }
+                    __enable_irq();
+            }
             }
         }
     }
@@ -263,7 +268,23 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
 
 
-void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
-    HAL_CAN_ResetError(hcan);
-    HAL_CAN_Start(hcan);
-}
+// 增强错误处理回调
+// void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+// {
+//     uint32_t error_code = HAL_CAN_GetError(hcan);
+    
+//     // 重置错误标志
+//     HAL_CAN_ResetError(hcan);
+    
+//     // 如果是严重错误，执行完整的重启流程
+//     if(error_code) {
+//         HAL_CAN_Stop(hcan);
+//         HAL_CAN_Start(hcan);
+        
+//         // 重新激活所有中断
+//         HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING |
+//                                           CAN_IT_RX_FIFO1_MSG_PENDING |
+//                                           CAN_IT_ERROR);
+        
+//     }
+// }
