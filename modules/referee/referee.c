@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "cmsis_os.h"
+#include "robotdef.h"
  
 #define LOG_TAG "referee"
 #define LOG_LVL LOG_LVL_DBG
@@ -298,4 +299,29 @@ const void* GetRefereeDataByCmd(CmdID_e cmd_id, uint16_t* data_length)
             *data_length = 0;
             return NULL;
     }
+}
+
+
+void referee_to_gimbal(Chassis_referee_Upload_Data_s *Chassis_referee_Upload_Data){
+    Chassis_referee_Upload_Data->Robot_Color = 
+    (referee_info.referee_id.Robot_ID <= 7) ? 0 : 
+    (referee_info.referee_id.Robot_ID > 100) ? 1 : 0;  // 默认为红方
+    
+    Chassis_referee_Upload_Data->current_hp_percent = referee_info.GameRobotState.current_HP;
+    
+    Chassis_referee_Upload_Data->outpost_HP = 
+    (referee_info.referee_id.Robot_ID <= 7) ? referee_info.GameRobotHP.red_outpost_HP: 
+    (referee_info.referee_id.Robot_ID > 100) ? referee_info.GameRobotHP.blue_outpost_HP : referee_info.GameRobotHP.red_outpost_HP;  // 默认为红方
+
+    Chassis_referee_Upload_Data->base_HP = 
+    (referee_info.referee_id.Robot_ID <= 7) ? referee_info.GameRobotHP.red_base_HP: 
+    (referee_info.referee_id.Robot_ID > 100) ? referee_info.GameRobotHP.blue_base_HP : referee_info.GameRobotHP.red_base_HP;  // 默认为红方
+
+    Chassis_referee_Upload_Data->game_progess = referee_info.GameState.game_progress;
+    
+    Chassis_referee_Upload_Data->game_time = referee_info.GameState.stage_remain_time;
+
+    Chassis_referee_Upload_Data->projectile_allowance_17mm = referee_info.ext_shoot_remaing.projectile_allowance_17mm;
+
+    Chassis_referee_Upload_Data->power_management_shooter_output = referee_info.GameRobotState.power_management_shooter_output;
 }

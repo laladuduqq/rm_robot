@@ -4,6 +4,7 @@
 #include "bsp_uart.h"
 #include "offline.h"
 #include "referee_protocol.h"
+#include "robotdef.h"
 #include <stdint.h>
 
 #pragma pack(1)
@@ -56,5 +57,6 @@ extern uint8_t UI_Seq;
 void RefereeInit(void);
 void RefereeSend(uint8_t *send, uint16_t tx_len);
 const void* GetRefereeDataByCmd(CmdID_e cmd_id, uint16_t* data_length);
+void referee_to_gimbal(Chassis_referee_Upload_Data_s *Chassis_referee_Upload_Data);
 
 #endif 

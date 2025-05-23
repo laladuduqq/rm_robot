@@ -3,6 +3,7 @@
 #include "dji.h"
 #include "imu.h"
 #include "message_center.h"
+#include "referee.h"
 #include "sbus.h"
 #include "usbd_cdc_if.h"
 #include "user_lib.h"
@@ -87,12 +88,18 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 board_send(&chassis_cmd_send);    
 
                 sentry_send.header = 0xaa;
-                sentry_send.current_hp = board_com->Chassis_Upload_Data.current_hp_percent;
-                sentry_send.mode = 0;
+                sentry_send.current_hp_percent = board_com->Chassis_Upload_Data.current_hp_percent;
+                sentry_send.projectile_allowance_17mm = board_com->Chassis_Upload_Data.projectile_allowance_17mm;  //剩余发弹量
+                sentry_send.power_management_shooter_output = board_com->Chassis_Upload_Data.power_management_shooter_output; // 功率管理 shooter 输出
+                sentry_send.current_hp_percent = board_com->Chassis_Upload_Data.current_hp_percent; // 机器人当前血量百分比
+                sentry_send.outpost_HP = board_com->Chassis_Upload_Data.outpost_HP;     //前哨站血量
+                sentry_send.base_HP = board_com->Chassis_Upload_Data.base_HP;        //基地血量
+                sentry_send.game_progess = board_com->Chassis_Upload_Data.game_progess;
+                sentry_send.game_time = board_com->Chassis_Upload_Data.game_time;
+                sentry_send.mode = board_com->Chassis_Upload_Data.Robot_Color ^ 1;
                 sentry_send.roll = INS.Roll;
                 sentry_send.pitch = INS.Pitch; 
-                sentry_send.yaw = INS.YawTotalAngle;
-                sentry_send.check_byte =0;
+                sentry_send.yaw = INS.Yaw;
                 sentry_send.end = 0x0D;
                 uint8_t data[sizeof(struct Sentry_Send_s)]={0};
                 memcpy(data,&sentry_send,sizeof(struct Sentry_Send_s));
@@ -143,6 +150,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                     chassis_cmd_send = *(Chassis_Ctrl_Cmd_s *)BoardRead();
                 }
                 PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+                referee_to_gimbal(&Chassis_referee_Upload_Data);
                 board_send(&Chassis_referee_Upload_Data);     
             } 
     #endif 

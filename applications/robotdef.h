@@ -217,12 +217,13 @@ typedef struct
 typedef struct
 {
     uint8_t Robot_Color;
+    uint16_t projectile_allowance_17mm;  //剩余发弹量
     uint8_t power_management_shooter_output; // 功率管理 shooter 输出
     uint16_t current_hp_percent; // 机器人当前血量百分比
-    uint16_t red_outpost_HP;     //红方前哨站
-    uint16_t red_base_HP;        //红方基地
-    uint16_t blue_outpost_HP;    //蓝方前哨站
-    uint16_t blue_base_HP;        //红方基地
+    uint16_t outpost_HP;     //前哨站血量
+    uint16_t base_HP;        //基地血量
+    uint8_t game_progess;
+    uint16_t game_time;
 } Chassis_referee_Upload_Data_s;
 
 typedef struct
