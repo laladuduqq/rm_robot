@@ -94,7 +94,8 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-
+static USB_RxCpltCallback_t USB_RxCallback = NULL;
+static USB_TxCpltCallback_t USB_TxCpltCallback = NULL;
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -128,7 +129,14 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-
+void USB_RegisterCallback(USB_RxCpltCallback_t callback)
+{
+    USB_RxCallback = callback;
+}
+void USB_RegisterTxCpltCallback(USB_TxCpltCallback_t callback)
+{
+    USB_TxCpltCallback = callback;
+}
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -261,6 +269,11 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+  __disable_irq();
+  if(USB_RxCallback != NULL) {
+    USB_RxCallback(Buf, *Len);
+  }
+  __enable_irq();
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

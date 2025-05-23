@@ -33,8 +33,8 @@ extern "C"{
 
 #ifndef ONE_BOARD // 多板控制整车 （注意只能有一个生效）
     #if defined (ENGINEER_MODE) || defined (INFANTRY_MODE) || defined (SENTRY_MODE) || defined (HERO_MODE)
-        #define CHASSIS_BOARD //底盘板
-        //#define GIMBAL_BOARD  //云台板
+        //#define CHASSIS_BOARD //底盘板
+        #define GIMBAL_BOARD  //云台板
 
         #define GIMBAL_ID 0X310
         #define CHASSIS_ID 0X311

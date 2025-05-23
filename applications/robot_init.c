@@ -17,6 +17,7 @@
 #include "shootcmd.h"
 #include "systemwatch.h"
 #include "robotdef.h"
+#include "vcom.h"
 
 #define HARDWARE_VERSION               "V1.0.0"
 #define SOFTWARE_VERSION               "V0.1.0"
@@ -37,6 +38,7 @@ void robot_init(void)
     offline_init();
     INS_TASK_init();
     #if defined (GIMBAL_BOARD)
+    vcom_init();
     DM_IMU_Init();
         #if CONTROL_SOURCE == 1
             Remote_init();

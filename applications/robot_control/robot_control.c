@@ -1,11 +1,15 @@
 #include "board_com.h"
 #include "can.h"
 #include "dji.h"
+#include "imu.h"
 #include "message_center.h"
 #include "sbus.h"
+#include "usbd_cdc_if.h"
 #include "user_lib.h"
 #include "offline.h"
 #include "robotdef.h"
+#include "vcom.h"
+#include <stdint.h>
 #include <string.h>
 
 
@@ -37,6 +41,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
             //static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 
             static board_com_t *board_com = NULL; // 板间通讯实例
+            static struct Sentry_Send_s sentry_send;
             void robot_control_init(void)
             {
                 //订阅 发布注册
@@ -80,6 +85,18 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 PubPushMessage(shoot_cmd_pub,(void *)&shoot_cmd_send);
 
                 board_send(&chassis_cmd_send);    
+
+                sentry_send.header = 0xaa;
+                sentry_send.current_hp = board_com->Chassis_Upload_Data.current_hp_percent;
+                sentry_send.mode = 0;
+                sentry_send.roll = INS.Roll;
+                sentry_send.pitch = INS.Pitch; 
+                sentry_send.yaw = INS.YawTotalAngle;
+                sentry_send.check_byte =0;
+                sentry_send.end = 0x0D;
+                uint8_t data[sizeof(struct Sentry_Send_s)]={0};
+                memcpy(data,&sentry_send,sizeof(struct Sentry_Send_s));
+                CDC_Transmit_FS(data,sizeof(struct Sentry_Send_s));           
             } 
     #else
             static Chassis_referee_Upload_Data_s Chassis_referee_Upload_Data;

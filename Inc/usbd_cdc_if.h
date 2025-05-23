@@ -65,6 +65,11 @@
   */
 
 /* USER CODE BEGIN EXPORTED_TYPES */
+typedef void (*USB_RxCpltCallback_t)(uint8_t* Buf, uint32_t Len);
+typedef void (*USB_TxCpltCallback_t)(void);
+/* 函数声明 */
+void USB_RegisterCallback(USB_RxCpltCallback_t callback);
+void USB_RegisterTxCpltCallback(USB_TxCpltCallback_t callback);
 
 /* USER CODE END EXPORTED_TYPES */
 
