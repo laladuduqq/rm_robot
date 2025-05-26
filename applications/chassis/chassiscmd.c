@@ -6,6 +6,8 @@
 #include "message_center.h"
 #include "motor_def.h"
 #include "offline.h"
+#include "referee.h"
+#include "referee_protocol.h"
 #include "robotdef.h"
 #include "systemwatch.h"
 #include "user_lib.h"
@@ -24,6 +26,7 @@ static DJIMotor_t *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forw
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static PIDInstance chassis_follow_pid;
 static Subscriber_t *chassis_sub;                  // cmd控制消息订阅者
+static Hit_Check_t hit_check={0};
 
 extern void ChassisCalculate(float chassis_vx, float chassis_vy, float chassis_wz,float *wheel_ops);
 void ChassisInit(void)
@@ -93,6 +96,13 @@ void ChassisInit(void)
 
 
     chassis_sub = SubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
+
+    Hit_Check_t hit_check = {
+        .is_being_hit = 0,
+        .last_hp = 0,
+        .last_hit_time = 0,
+        .is_first_check = 1
+    };
 }
 
 void chassis_thread_entry(const void *parameter)
@@ -134,37 +144,33 @@ void chassis_thread_entry(const void *parameter)
             case CHASSIS_ROTATE: // 自旋,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
                 chassis_cmd_recv.wz = 0.45;
                 break;
-            case CHASSIS_AUTO_MODE:                
-            // if (read_referee_game_progress() == 4) {
-            //     if (chassis_cmd_recv.vx == 0 && chassis_cmd_recv.vy == 0) {
-            //         chassis_cmd_recv.wz = 1;
-            //     } else {
-            //         chassis_cmd_recv.wz = 0;
-            //     }
-            //     aRGB_led_show(LED_Blue);
-            // } else if (read_referee_game_progress() == 3) {
-            //     if (game_progress_3_start_time == 0) {
-            //         game_progress_3_start_time = rt_tick_get(); // 记录开始时间
-            //     }
-            //     rt_tick_t current_time = rt_tick_get();
-            //     if ((current_time - game_progress_3_start_time)/1000 >= GAME_PROGRESS_3_TIMEOUT) {
-            //         // 5秒后允许行进
-            //         if (chassis_cmd_recv.vx == 0 && chassis_cmd_recv.vy == 0) {
-            //             chassis_cmd_recv.wz = 1;
-            //         } else {
-            //             chassis_cmd_recv.wz = 0;
-            //         }
-            //     } else {
-            //         chassis_cmd_recv.vx = 0;
-            //         chassis_cmd_recv.vy = 0;
-            //         chassis_cmd_recv.wz = 0;
-            //     }
-            // }  
-            // else {
-            //     chassis_cmd_recv.vx = 0;
-            //     chassis_cmd_recv.vy = 0;
-            //     chassis_cmd_recv.wz = 0;
-            // }
+            case CHASSIS_AUTO_MODE:  
+                {
+                    uint16_t data_len = sizeof(ext_game_state_t);
+                    const ext_game_state_t* game_data = GetRefereeDataByCmd(ID_game_state, &data_len);
+                    if (game_data->game_progress == 4)
+                    {
+                        if (CheckRobotBeingHit(&hit_check)==0)
+                        {
+                            PIDCalculate(&chassis_follow_pid,chassis_cmd_recv.offset_angle,0);
+                            chassis_cmd_recv.wz = chassis_follow_pid.Output;
+                        }
+                        if (chassis_cmd_recv.vx == 0 && chassis_cmd_recv.vy == 0 && CheckRobotBeingHit(&hit_check)==1)
+                        {
+                            chassis_cmd_recv.wz = 2;
+                        }
+                        if (chassis_cmd_recv.vx !=0 && chassis_cmd_recv.vy != 0 && CheckRobotBeingHit(&hit_check)==1)
+                        {
+                            chassis_cmd_recv.wz = 0.5;
+                        }
+                    }
+                    else
+                    {
+                        chassis_cmd_recv.vx =0;
+                        chassis_cmd_recv.vy =0;
+                        chassis_cmd_recv.wz =0;
+                    }
+                }
             break;
             
             default:
@@ -206,5 +212,47 @@ void chassis_task_init(void){
     }
     log_i("gimbal task created");
     ChassisInit();
+}
+
+/**
+ * @brief 检查机器人是否正在被击打
+ * @param hit_check 击打检测结构体
+ * @return 1表示正在被击打，0表示没有被击打
+ */
+uint8_t CheckRobotBeingHit(Hit_Check_t *hit_check)
+{
+    uint16_t data_len = sizeof(ext_game_robot_state_t);
+    const ext_game_robot_state_t* robot_state = GetRefereeDataByCmd(ID_game_robot_state, &data_len);
+    
+    if (robot_state == NULL) {
+        return 0;
+    }
+
+    // 首次检查时初始化数据
+    if (hit_check->is_first_check) {
+        hit_check->last_hp = robot_state->current_HP;
+        hit_check->is_first_check = 0;
+        return 0;
+    }
+    
+    uint32_t current_time = xTaskGetTickCount();
+
+    // 检测血量是否减少
+    if (robot_state->current_HP < hit_check->last_hp) {
+        hit_check->is_being_hit = 1;
+        hit_check->last_hit_time = current_time;
+        //log_w("Hit detected! HP decreased from %d to %d", hit_check->last_hp, robot_state->current_HP);
+    }
+    // 检查是否超过5秒没有受到新的伤害
+    else if (hit_check->is_being_hit && 
+             (current_time - hit_check->last_hit_time > 5000)) {
+        hit_check->is_being_hit = 0;
+        //log_i("Robot recovered from hit");
+    }
+    
+    // 更新上一次的血量值
+    hit_check->last_hp = robot_state->current_HP;
+    
+    return hit_check->is_being_hit;
 }
 

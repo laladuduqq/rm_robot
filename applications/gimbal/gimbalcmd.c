@@ -10,6 +10,7 @@
 #include "imu.h"
 #include "dm_imu.h"
 #include "systemwatch.h"
+#include "vcom.h"
 #include "gimbalcmd.h"
 
 #define LOG_TAG              "gimcmd"
@@ -22,7 +23,13 @@ static osThreadId gimbalTaskHandle;
     static Subscriber_t *gimbal_sub;                  // cmd控制消息订阅者
     static Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
     static Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
+    static float small_yaw_offset=0.0f;
 
+    static float sine_time_yaw,sine_time_pitch = 0.0f;
+    #define SINE_FREQ_YAW 0.2f           // 正弦运动频率(Hz)
+    #define SINE_FREQ_Pitch 1.5f           // 正弦运动频率(Hz)
+    #define YAW_SINE_AMP 80.0f      // yaw轴正弦运动幅度(度) - 基于中间位置的偏移量
+    #define PITCH_SINE_AMP 10.0f     // pitch轴正弦运动幅度(度)
 
     DJIMotor_t *big_yaw = NULL;
     DJIMotor_t *small_yaw = NULL; 
@@ -154,6 +161,8 @@ void gimbal_thread_entry(const void *parameter)
          && !get_device_status(small_yaw->offline_index) 
          && !get_device_status(pitch_motor->offline_index) ) 
         {
+            // 计算相对角度
+            small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
             if (gimbal_cmd_recv.gimbal_mode != GIMBAL_ZERO_FORCE)
             {
                 DJIMotorEnable(big_yaw);
@@ -172,15 +181,11 @@ void gimbal_thread_entry(const void *parameter)
                 {
                     DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
-
-                    // 计算相对角度
-                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
                     DJIMotorSetRef(small_yaw, small_yaw_offset);
                     break;
                 }
                 case GIMBAL_KEEPING_BIG_YAW:
                 {
-                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
                     DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     DMMotorSetRef(pitch_motor, gimbal_cmd_recv.pitch);
                     DJIMotorSetRef(small_yaw, gimbal_cmd_recv.small_yaw + small_yaw_offset);
@@ -188,10 +193,45 @@ void gimbal_thread_entry(const void *parameter)
                 }
                 case GIMBAL_AUTO_MODE:
                 {
-                    DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
-                    // 计算相对角度
-                    float small_yaw_offset = INS.YawTotalAngle - small_yaw->measure.total_angle; 
-                    DJIMotorSetRef(small_yaw, small_yaw_offset);
+                    if (get_device_status(vcom_receive.offline_index)==0)
+                    {
+                        if (vcom_receive.recv.distance ==-1)
+                        {
+                            // 基于small_yaw_offset(中间位置)进行正弦运动
+                            float yaw_sine = YAW_SINE_AMP * arm_sin_f32(2.0f * PI * SINE_FREQ_YAW * sine_time_yaw);
+                            float pitch_sine = PITCH_SINE_AMP * arm_sin_f32(2.0f * PI * SINE_FREQ_Pitch * sine_time_pitch);
+                            
+                            // pitch轴在水平位置基础上进行正弦运动
+                            float pitch_target = SMALL_YAW_PITCH_HORIZON_ANGLE + pitch_sine;
+                            // 限制pitch角度范围
+                            pitch_target = fminf(fmaxf(pitch_target, SMALL_YAW_PITCH_MIN_ANGLE), SMALL_YAW_PITCH_MAX_ANGLE);
+                            
+                            DMMotorSetRef(pitch_motor, pitch_target);
+                            // small_yaw基于中间位置(small_yaw_offset)进行正弦运动
+                            DJIMotorSetRef(small_yaw, small_yaw_offset + yaw_sine);
+                        }
+                        else
+                        {
+    
+                            DMMotorSetRef(pitch_motor, vcom_receive.recv.pitch);
+                            DJIMotorSetRef(small_yaw, vcom_receive.recv.yaw + INS.YawRoundCount * 360.0f);
+                        }
+                        // 更新时间
+                        sine_time_yaw += 0.003f;
+                        if(sine_time_yaw >= (1.0f/SINE_FREQ_YAW)) {
+                            sine_time_yaw = 0.0f;
+                        }
+                        sine_time_pitch += 0.003f;
+                        if(sine_time_pitch >= (1.0f/SINE_FREQ_Pitch)) {
+                            sine_time_pitch = 0.0f;
+                        }
+                    }
+                    else
+                    {
+                        DMMotorSetRef(pitch_motor, SMALL_YAW_PITCH_HORIZON_ANGLE); 
+                        DJIMotorSetRef(small_yaw, small_yaw_offset);
+                    }
+                    DJIMotorSetRef(big_yaw,gimbal_cmd_recv.yaw);
                     break;
                 }
                 default:

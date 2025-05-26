@@ -461,6 +461,7 @@ void DJIMotorControl(void)
             control_output = 0;
         }
         else {
+            __disable_irq(); 
             // 根据控制算法计算输出
             switch (motor->motor_settings.control_algorithm) 
             {
@@ -476,6 +477,7 @@ void DJIMotorControl(void)
                     control_output = 0;
                     break;
             }
+            __enable_irq(); 
         }
         // 根据功率控制状态分别处理
         if(motor->motor_settings.PowerControlState == PowerControlState_ON) {

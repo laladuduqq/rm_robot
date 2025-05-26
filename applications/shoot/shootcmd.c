@@ -119,8 +119,28 @@ void shootask(const void *parameter)
                 if (shoot_cmd_recv.friction_mode == FRICTION_ON)
                 {
                     // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
-                    DJIMotorSetRef(friction_l, 6500*RPM_2_ANGLE_PER_SEC);
-                    DJIMotorSetRef(friction_r, -6500*RPM_2_ANGLE_PER_SEC);
+                    DJIMotorSetRef(friction_l, 6200*RPM_2_ANGLE_PER_SEC);
+                    DJIMotorSetRef(friction_r, -6200*RPM_2_ANGLE_PER_SEC);
+                    switch (shoot_cmd_recv.load_mode)
+                    {
+                        // 停止拨盘
+                        case LOAD_STOP:     
+                            DJIMotorSetRef(loader, 0);      
+                            break;
+                        // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
+                        case  LOAD_1_BULLET :
+                            DJIMotorSetRef(loader, -2000 * 6.0f);
+                            break;
+                        // 修改连发模式的逻辑
+                        case LOAD_BURSTFIRE:
+                            DJIMotorSetRef(loader, -6000 * 6.0f);
+                            break;
+                        case LOAD_REVERSE:
+                            break;
+                        case LOAD_3_BULLET:
+                        default:
+                            break;
+                    }
                 }
                 else // 关闭摩擦轮
                 {
@@ -128,26 +148,6 @@ void shootask(const void *parameter)
                     DJIMotorSetRef(friction_r, 0);
                     DJIMotorSetRef(loader, 0);
                 }              
-                switch (shoot_cmd_recv.load_mode)
-                {
-                    // 停止拨盘
-                    case LOAD_STOP:     
-                        DJIMotorSetRef(loader, 0);      
-                        break;
-                    // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
-                    case  LOAD_1_BULLET :
-                        DJIMotorSetRef(loader, -2000 * 6.0f);
-                        break;
-                    // 修改连发模式的逻辑
-                    case LOAD_BURSTFIRE:
-                        DJIMotorSetRef(loader, -6000 * 6.0f);
-                        break;
-                    case LOAD_REVERSE:
-                        break;
-                    case LOAD_3_BULLET:
-                    default:
-                        break;
-                }
             }
             else 
             {

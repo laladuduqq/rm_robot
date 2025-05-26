@@ -74,15 +74,35 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
             void robot_control(void)
             {
                 SubGetMessage(gimbal_feed_sub, &gimbal_fetch_data);
-                chassis_cmd_send.vx =0;
-                chassis_cmd_send.vy =0;
-                chassis_cmd_send.wz =0;
-                chassis_cmd_send.offset_angle = 0;
-                chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
                 chassis_cmd_send.offset_angle = CalcOffsetAngle(gimbal_fetch_data.yaw_motor_single_round_angle);
                 RemoteControlSet(&chassis_cmd_send,&shoot_cmd_send,&gimbal_cmd_send);
                 
                 PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
+
+                if (gimbal_cmd_send.gimbal_mode == GIMBAL_AUTO_MODE)
+                {
+                    offline_device_enable(vcom_receive.offline_index);
+                    if (get_device_status(vcom_receive.offline_index)==0)
+                    {
+                        chassis_cmd_send.vx = vcom_receive.recv.vx * -300.0f;
+                        chassis_cmd_send.vy = vcom_receive.recv.vy * -300.0f;
+                        if (gimbal_cmd_send.gimbal_mode == GIMBAL_AUTO_MODE)
+                        {
+                            if (vcom_receive.recv.fire_advice ==1)
+                            {
+                                shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
+                            }
+                            else
+                            {
+                                shoot_cmd_send.load_mode = LOAD_STOP;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    offline_device_disable(vcom_receive.offline_index);
+                }
                 PubPushMessage(shoot_cmd_pub,(void *)&shoot_cmd_send);
 
                 board_send(&chassis_cmd_send);    
@@ -96,9 +116,9 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 sentry_send.base_HP = board_com->Chassis_Upload_Data.base_HP;        //基地血量
                 sentry_send.game_progess = board_com->Chassis_Upload_Data.game_progess;
                 sentry_send.game_time = board_com->Chassis_Upload_Data.game_time;
-                sentry_send.mode = board_com->Chassis_Upload_Data.Robot_Color ^ 1;
+                sentry_send.mode = 0;
                 sentry_send.roll = INS.Roll;
-                sentry_send.pitch = INS.Pitch; 
+                sentry_send.pitch = INS.Pitch * (-1);
                 sentry_send.yaw = INS.Yaw;
                 sentry_send.end = 0x0D;
                 uint8_t data[sizeof(struct Sentry_Send_s)]={0};

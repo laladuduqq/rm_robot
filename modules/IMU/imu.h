@@ -31,6 +31,7 @@ typedef struct
     float Pitch;
     float Yaw;
     float YawTotalAngle;
+    int16_t YawRoundCount;
 
     float gyroWorld[3]; //世界坐标系下角速度
 

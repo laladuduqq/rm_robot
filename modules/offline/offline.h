@@ -7,7 +7,7 @@
 #include "task.h"
 
 // 配置定义
-#define MAX_OFFLINE_DEVICES    10      // 最大离线设备数量  beep 10ms周期 最多响10下
+#define MAX_OFFLINE_DEVICES    12      // 最大离线设备数量 
 #define OFFLINE_INVALID_INDEX  0xFF
 
 // 状态定义

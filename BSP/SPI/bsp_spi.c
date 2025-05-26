@@ -154,6 +154,9 @@ void BSP_SPI_Transmit(SPI_DeviceInstance_t* dev, const uint8_t* tx_data,uint16_t
 
 void BSP_SPI_Receive(SPI_DeviceInstance_t* dev,uint8_t* rx_data,uint16_t size)
 {
+    if (!dev || !dev->cs_port  || !rx_data) {
+        return;
+    }
     SPI_HandleTypeDef* hspi = spi_bus_pool[dev->target_bus].hspi;
 
     if(xSemaphoreTake(spi_bus_pool[dev->target_bus].mutex, 100) != pdTRUE) {return;}

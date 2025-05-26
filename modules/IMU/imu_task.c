@@ -137,6 +137,7 @@ void INSTask(const void *argument)
             INS.Pitch = QEKF_INS.Pitch;
             INS.Roll = QEKF_INS.Roll;
             INS.YawTotalAngle = QEKF_INS.YawTotalAngle;
+            INS.YawRoundCount = QEKF_INS.YawRoundCount;
         }
     
         // temperature control
