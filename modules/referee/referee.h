@@ -58,5 +58,6 @@ void RefereeInit(void);
 void RefereeSend(uint8_t *send, uint16_t tx_len);
 const void* GetRefereeDataByCmd(CmdID_e cmd_id, uint16_t* data_length);
 void referee_to_gimbal(Chassis_referee_Upload_Data_s *Chassis_referee_Upload_Data);
+void Sentry_Free_Revive(void);
 
 #endif 

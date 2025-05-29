@@ -2,6 +2,8 @@
 #include "cmsis_os.h"
 #include "FreeRTOS.h"
 #include "dwt.h"
+#include "iwdg.h"
+#include "stm32f4xx_hal_iwdg.h"
 #include "task.h"
 #include "tim.h"
 #include <stdint.h>
@@ -27,6 +29,7 @@ static void SystemWatch_Task(const void *argument)
     float last_dt[MAX_MONITORED_TASKS] = {0};
     
     while(1) {
+        HAL_IWDG_Refresh(&hiwdg);
         taskList[0].dt = DWT_GetDeltaT(&taskList[0].dt_cnt); //自身更新
         watch_task_last_active = xTaskGetTickCount();
         for(uint8_t i = 0; i < taskCount; i++) {
@@ -50,7 +53,6 @@ static void SystemWatch_Task(const void *argument)
                     
                     PrintSystemStatus();
                     taskEXIT_CRITICAL();
-                    osDelay(1000);
                     HAL_NVIC_SystemReset();   
                 }
                 last_dt[i] = taskList[i].dt;
@@ -62,6 +64,7 @@ static void SystemWatch_Task(const void *argument)
 
 // 定时器中断回调，用于监控 SystemWatch 任务本身
 void sysytemwatch_it_callback(void){
+    HAL_IWDG_Refresh(&hiwdg);
     if (systemwatch_init==1)
     {
         {
@@ -195,6 +198,7 @@ void SystemWatch_ReportTaskAlive(osThreadId taskHandle)
     for(uint8_t i = 0; i < taskCount; i++) {
         if(taskList[i].handle == taskHandle) {
             taskList[i].dt = DWT_GetDeltaT(&taskList[i].dt_cnt);
+            HAL_IWDG_Refresh(&hiwdg);
             break;
         }
     }

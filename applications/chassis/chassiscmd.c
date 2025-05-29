@@ -3,6 +3,7 @@
 #include "cmsis_os.h"
 #include "dji.h"
 #include "dwt.h"
+#include "imu.h"
 #include "message_center.h"
 #include "motor_def.h"
 #include "offline.h"
@@ -11,6 +12,7 @@
 #include "robotdef.h"
 #include "systemwatch.h"
 #include "user_lib.h"
+#include <stdint.h>
 #include "chassiscmd.h"
 
 
@@ -27,6 +29,11 @@ static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static PIDInstance chassis_follow_pid;
 static Subscriber_t *chassis_sub;                  // cmd控制消息订阅者
 static Hit_Check_t hit_check={0};
+
+#define GRAVITY_COMP_GAIN 100.0f    // 重力补偿系数，可调
+#define MAX_COMP_OUTPUT 200.0f      // 最大补偿输出限幅
+#define ANGLE_DEADZONE 5.0f  // 小角度死区
+static float gx, gy;   
 
 extern void ChassisCalculate(float chassis_vx, float chassis_vy, float chassis_wz,float *wheel_ops);
 void ChassisInit(void)
@@ -150,7 +157,11 @@ void chassis_thread_entry(const void *parameter)
                     const ext_game_state_t* game_data = GetRefereeDataByCmd(ID_game_state, &data_len);
                     if (game_data->game_progress == 4)
                     {
-                        if (CheckRobotBeingHit(&hit_check)==0)
+                        if (chassis_cmd_recv.vx == 0 && chassis_cmd_recv.vy == 0 && CheckRobotBeingHit(&hit_check)==0)
+                        {
+                            chassis_cmd_recv.wz = 0;
+                        }
+                        else if (chassis_cmd_recv.vx != 0 && chassis_cmd_recv.vy != 0 && CheckRobotBeingHit(&hit_check)==0)
                         {
                             PIDCalculate(&chassis_follow_pid,chassis_cmd_recv.offset_angle,0);
                             chassis_cmd_recv.wz = chassis_follow_pid.Output;
@@ -176,6 +187,22 @@ void chassis_thread_entry(const void *parameter)
             default:
                 break;
             }
+
+            // 计算重力补偿
+            gx = GRAVITY_COMP_GAIN * INS.Pitch ;    // 前后方向补偿
+            gy = GRAVITY_COMP_GAIN * INS.Roll  ;     // 左右方向补偿
+
+            // 限制补偿输出
+            gx = float_constrain(gx, -MAX_COMP_OUTPUT, MAX_COMP_OUTPUT);
+            gy = float_constrain(gy, -MAX_COMP_OUTPUT, MAX_COMP_OUTPUT);
+
+            // 添加死区
+            if (fabs(INS.Pitch) < ANGLE_DEADZONE) gx = 0;
+            if (fabs(INS.Roll) < ANGLE_DEADZONE) gy = 0;
+
+            // 在云台坐标系下进行补偿
+            chassis_cmd_recv.vx += gx;  // 前后方向补偿
+            chassis_cmd_recv.vy += gy;  // 左右方向补偿
 
             // 根据云台和底盘的角度offset将控制量映射到底盘坐标系上
             // 底盘逆时针旋转为角度正方向;云台命令的方向以云台指向的方向为x,采用右手系(x指向正北时y在正东)
@@ -208,9 +235,9 @@ void chassis_task_init(void){
 
     if (chassisTaskHandle == NULL)
     {
-        log_e("Failed to create gimbal task");
+        log_e("Failed to create chassis task");
     }
-    log_i("gimbal task created");
+    log_i("chassis task created");
     ChassisInit();
 }
 

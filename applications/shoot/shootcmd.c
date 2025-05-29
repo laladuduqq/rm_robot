@@ -131,11 +131,8 @@ void shootask(const void *parameter)
                         case  LOAD_1_BULLET :
                             DJIMotorSetRef(loader, -2000 * 6.0f);
                             break;
-                        // 修改连发模式的逻辑
                         case LOAD_BURSTFIRE:
                             DJIMotorSetRef(loader, -6000 * 6.0f);
-                            break;
-                        case LOAD_REVERSE:
                             break;
                         case LOAD_3_BULLET:
                         default:

@@ -186,7 +186,12 @@ static void Process_Rx_Complete(UART_Device *inst, uint16_t Size) {
     // 计算实际接收长度
     if(inst->expected_len == 0){
         if(inst->rx_mode == UART_MODE_DMA){
-            Size = sizeof(inst->rx_buf[0]) - __HAL_DMA_GET_COUNTER(inst->huart->hdmarx);
+            // 修正为获取单缓冲区大小
+            Size = inst->rx_buf_size - __HAL_DMA_GET_COUNTER(inst->huart->hdmarx);
+            // 增加长度校验
+            if(Size > inst->rx_buf_size){
+                Size = inst->rx_buf_size;
+            }
         }
     }
     inst->rx_len = Size;

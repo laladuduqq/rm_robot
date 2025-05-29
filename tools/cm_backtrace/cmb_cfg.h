@@ -30,6 +30,8 @@
 #define _CMB_CFG_H_
 
 #include "elog.h"
+#include "iwdg.h"
+#include "stm32f4xx_hal_iwdg.h"
 
 // 基于168MHz主频的软件延时函数
 static inline __attribute__((always_inline)) void fault_delay_us(volatile uint32_t us) {
@@ -42,7 +44,7 @@ static inline __attribute__((always_inline)) void fault_delay_us(volatile uint32
 #include "cmb_user_cfg.h"
 #else
 /* print line, must config by user */
-#define cmb_println(...)               elog_e(LOG_TAG, __VA_ARGS__);fault_delay_us(20000); /* 延时0.5s确保日志输出完成 */ /* e.g., printf(__VA_ARGS__);printf("\r\n")  or  SEGGER_RTT_printf(0, __VA_ARGS__);SEGGER_RTT_WriteString(0, "\r\n")  */
+#define cmb_println(...)               elog_e(LOG_TAG, __VA_ARGS__);fault_delay_us(2000);HAL_IWDG_Refresh(&hiwdg); /* 延时0.5s确保日志输出完成 */ /* e.g., printf(__VA_ARGS__);printf("\r\n")  or  SEGGER_RTT_printf(0, __VA_ARGS__);SEGGER_RTT_WriteString(0, "\r\n")  */
 /* enable OS platform */
 #define CMB_USING_OS_PLATFORM
 /* OS platform type, must config when CMB_USING_OS_PLATFORM is enable */

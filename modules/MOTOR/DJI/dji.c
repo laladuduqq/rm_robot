@@ -168,12 +168,15 @@ static void MotorSenderGrouping(DJIMotor_t *motor, Can_Device_Init_Config_s *con
      for (uint8_t i = 0; i < idx; i++) {
          if (i >= DJI_MOTOR_CNT || dji_motor_list[i] == NULL) {continue;}
          if (dji_motor_list[i]->can_device == NULL) {continue;}
- 
+
          if (dji_motor_list[i]->can_device->can_handle == hcan && dji_motor_list[i]->can_device->rx_id == rx_id)
          {
              // 更新在线状态
              offline_device_update(dji_motor_list[i]->offline_index);
- 
+            // 确保rx_buff长度足够
+            if (dji_motor_list[i]->can_device->rx_len < 8) {
+                continue;
+            }
              // 使用临时变量存储计算结果，避免直接访问可能无效的内存
              uint16_t ecd = ((uint16_t)dji_motor_list[i]->can_device->rx_buff[0] << 8) | dji_motor_list[i]->can_device->rx_buff[1];
              int16_t speed = (int16_t)(dji_motor_list[i]->can_device->rx_buff[2] << 8 | dji_motor_list[i]->can_device->rx_buff[3]);
@@ -455,8 +458,9 @@ void DJIMotorControl(void)
     
     // 第一次遍历：计算控制输出
     for (size_t i = 0; i < idx; ++i) {
+        if (i > DJI_MOTOR_CNT || dji_motor_list[i] == NULL){continue;}
+        
         motor = dji_motor_list[i];
-
         if (get_device_status(motor->offline_index)==1 || motor->stop_flag == MOTOR_STOP) {
             control_output = 0;
         }
@@ -498,6 +502,7 @@ void DJIMotorControl(void)
         motor = dji_motor_list[i];
         group = motor->sender_group;
         num = motor->message_num;
+        if (group > 10 || num > 3){continue;}
         
         int16_t output;
         // 根据功率控制状态选择输出来源

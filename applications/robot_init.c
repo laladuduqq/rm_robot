@@ -8,6 +8,7 @@
 #include "elog.h"
 #include "gimbalcmd.h"
 #include "imu.h"
+#include "iwdg.h"
 #include "motor_task.h"
 #include "offline.h"
 #include "powercontroller.h"
@@ -15,6 +16,8 @@
 #include "robot_task.h"
 #include "sbus.h"
 #include "shootcmd.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_iwdg.h"
 #include "systemwatch.h"
 #include "robotdef.h"
 #include "vcom.h"
@@ -24,6 +27,7 @@
 
 void base_init(void)
 {
+    __HAL_DBGMCU_FREEZE_IWDG();
     cm_backtrace_init("CmBacktrace", HARDWARE_VERSION, SOFTWARE_VERSION);
     RGB_init();
     DWT_Init(168);
@@ -57,4 +61,5 @@ void robot_init(void)
     #else
     chassis_task_init();
     #endif
+    MX_IWDG_Init();
 }

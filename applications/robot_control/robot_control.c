@@ -116,7 +116,7 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
                 sentry_send.base_HP = board_com->Chassis_Upload_Data.base_HP;        //基地血量
                 sentry_send.game_progess = board_com->Chassis_Upload_Data.game_progess;
                 sentry_send.game_time = board_com->Chassis_Upload_Data.game_time;
-                sentry_send.mode = 0;
+                sentry_send.mode = 1 - board_com->Chassis_Upload_Data.Robot_Color;
                 sentry_send.roll = INS.Roll;
                 sentry_send.pitch = INS.Pitch * (-1);
                 sentry_send.yaw = INS.Yaw;
@@ -344,12 +344,22 @@ static void RemoteControlSet(Chassis_Ctrl_Cmd_s *Chassis_Ctrl,Shoot_Ctrl_Cmd_s *
     else
     {
         // 处理离线状态
-        Gimbal_Ctrl->gimbal_mode = GIMBAL_ZERO_FORCE;
-        Chassis_Ctrl->chassis_mode = CHASSIS_ZERO_FORCE;
-        Shoot_Ctrl->shoot_mode = SHOOT_OFF;
-        Shoot_Ctrl->friction_mode = FRICTION_OFF;
-        Shoot_Ctrl->load_mode = LOAD_STOP;
-        memset(Chassis_Ctrl, 0, sizeof(Chassis_Ctrl_Cmd_s));
+        if (board_com->Chassis_Upload_Data.game_progess == 4)
+        {
+            Gimbal_Ctrl->gimbal_mode = GIMBAL_AUTO_MODE;
+            Chassis_Ctrl->chassis_mode = CHASSIS_AUTO_MODE;
+            Shoot_Ctrl->shoot_mode = SHOOT_ON;
+            Shoot_Ctrl->friction_mode = FRICTION_ON;    
+        }
+        else
+        {
+            Gimbal_Ctrl->gimbal_mode = GIMBAL_ZERO_FORCE;
+            Chassis_Ctrl->chassis_mode = CHASSIS_ZERO_FORCE;
+            Shoot_Ctrl->shoot_mode = SHOOT_OFF;
+            Shoot_Ctrl->friction_mode = FRICTION_OFF;
+            Shoot_Ctrl->load_mode = LOAD_STOP;
+            memset(Chassis_Ctrl, 0, sizeof(Chassis_Ctrl_Cmd_s));
+        }
     }
 }
 #endif

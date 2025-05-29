@@ -17,9 +17,8 @@
 static referee_info_t referee_info;			  // 裁判系统数据
 uint8_t UI_Seq;
 static osThreadId refereeTaskHandle;
-static uint8_t referee_buf[2][128];
+static uint8_t referee_buf[2][1024];
 
-static void Sentry_Free_Revive(void);
 void RefereeTask(const void *argument);
 void JudgeReadData(uint8_t *buff);
 void DeterminRobotID(void);
@@ -27,7 +26,7 @@ void RefereeInit(void)
 {   
     OfflineDeviceInit_t offline_init = {
         .name = "referee",
-        .timeout_ms = 1000,
+        .timeout_ms = 500,
         .level = OFFLINE_LEVEL_HIGH,
         .beep_times = 6,
         .enable = OFFLINE_ENABLE
@@ -72,6 +71,7 @@ void RefereeTask(const void *argument)
             {
                 JudgeReadData(*referee_info.uart_device->rx_buf);
             }
+            osDelay(1);
         }
     }
 }
